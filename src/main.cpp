@@ -242,6 +242,16 @@ int main() {
           	vector<double> next_x_vals;
           	vector<double> next_y_vals;
 
+						double process_freq = 50; // 50 points per second
+						double speed_mph = 50; // MPH
+						double speed_kph = speed_mph * 1.6;
+						double speed_mps = speed_kph * 1000.0 / 3600.0;
+						double dist_inc = speed_mps / process_freq;
+
+						for(int i=0; i<50; i++) {
+							next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
+							next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
+						}
 
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           	msgJson["next_x"] = next_x_vals;
