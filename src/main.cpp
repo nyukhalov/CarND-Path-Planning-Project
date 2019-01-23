@@ -5,9 +5,14 @@
 #include <iostream>
 #include <thread>
 #include <vector>
+#include <map>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
+#include "road.h"
+#include "fsm.h"
+#include "behavior.h"
+#include "vehicle.h"
 
 using namespace std;
 
@@ -242,38 +247,40 @@ int main() {
           	vector<double> next_x_vals;
           	vector<double> next_y_vals;
 
-						int lane = 1;
-						double lane_width = 4;
-						double lane_boundary_left = lane_width * lane;
-						double lane_boundary_right = lane_width * (lane + 1);
-
-						double min_dist = 99999;
+						Vehicle self(car_x, car_y, car_s, car_d, car_yaw, car_speed);
+						map<int, vector<Vehicle>> predictions;
 						for(int i=0; i<sensor_fusion.size(); i++) {
-							// id, x, y, vx, vy, s, d
 							auto sf = sensor_fusion[i];
+							// id, x, y, vx, vy, s, d	
+							int id = (int) sf[0];
+							double x = sf[1];
+							double y = sf[2];
+							double vx = sf[3];
+							double vy = sf[4];
 							double s = sf[5];
 							double d = sf[6];
-							if (lane_boundary_left <= d && d < lane_boundary_right) {
-								if (s > car_s) {
-									double dist = s - car_s;
-									if (dist < min_dist) min_dist = dist;
-								}
-							}
+							double speed = sqrt(vx*vx + vy*vy);
+							Vehicle v(x, y, s, d, 0, speed);
+							predictions[id] = {v};
 						}
+
+						Behavior behavior;
+						Target t = behavior.plan(self, predictions);
+
+						// possible behavior module's output
+						int target_lane = t.lane;
+						double target_speed = t.speed;
 
 						double process_freq = 50.0; // 50 points per second
 						double dt = 1.0 / process_freq; // 0.02 sec
-						double speed_mph = 50; // MPH
 
-						if (min_dist < 15) speed_mph = 30;
-
-						double speed_kph = speed_mph * 1.6;
+						double speed_kph = target_speed * 1.6;
 						double speed_mps = speed_kph * 1000.0 / 3600.0;
 						double dist_inc = speed_mps / process_freq;
 
 						for (int i=0; i<50; i++) {
 							double s = car_s + (i+1) * dist_inc;
-							double d = (lane_width / 2.0) + (lane_width * lane);
+							double d = road::lane_center(target_lane);
 							auto xy = getXY(s, d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
 							next_x_vals.push_back(xy[0]);
 							next_y_vals.push_back(xy[1]);
