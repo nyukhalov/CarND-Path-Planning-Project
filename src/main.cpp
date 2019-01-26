@@ -271,6 +271,7 @@ int main() {
 						// possible behavior module's output
 						int target_lane = t.lane;
 						double target_speed = t.speed;
+						std::cout << "Target: speed=" << t.speed << ", lane=" << t.lane << std::endl;
 
 						double process_freq = 50.0; // 50 points per second
 						double dt = 1.0 / process_freq; // 0.02 sec

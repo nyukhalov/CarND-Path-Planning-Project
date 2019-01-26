@@ -11,6 +11,13 @@ namespace road {
         return lane_boundary_left <= d && d < lane_boundary_right;
     }
 
+    static int get_lane(double d) {
+        for(int lane=0; lane<3; lane++) {
+            if (is_within_lane(lane, d)) return lane;
+        }
+        return -1;
+    }
+
     static double lane_center(int lane) {
         return (WIDTH * 0.5) + (WIDTH * lane);
     }

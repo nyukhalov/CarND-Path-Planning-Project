@@ -23,8 +23,10 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
         }
     }
 
-    if (min_dist < 20)
-        t.speed = 30;
+    if (min_dist < 20) {
+        // t.speed = 30;
+        t.lane = 0;
+    }
 
     return t;
 };
