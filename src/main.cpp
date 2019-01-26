@@ -13,6 +13,7 @@
 #include "fsm.h"
 #include "behavior.h"
 #include "vehicle.h"
+#include "spline.h"
 
 using namespace std;
 
@@ -278,12 +279,87 @@ int main() {
 						double speed_mps = speed_kph * 1000.0 / 3600.0;
 						double dist_inc = speed_mps / process_freq;
 
-						for (int i=0; i<50; i++) {
-							double s = car_s + (i+1) * dist_inc;
-							double d = road::lane_center(target_lane);
-							auto xy = getXY(s, d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-							next_x_vals.push_back(xy[0]);
-							next_y_vals.push_back(xy[1]);
+						int prev_path_size = previous_path_x.size();
+
+						double last_car_x, last_car_y; // car's position at the end of its last traejctory
+						double prev_car_x, prev_car_y; // one point before
+						double ref_car_yaw_rad;
+
+						if (prev_path_size > 2) {
+							last_car_x = previous_path_x[prev_path_size - 1];
+							last_car_y = previous_path_y[prev_path_size - 1];
+
+							prev_car_x = previous_path_x[prev_path_size - 2];
+							prev_car_y = previous_path_y[prev_path_size - 2];
+
+							ref_car_yaw_rad = atan2(last_car_y-prev_car_y, last_car_x-prev_car_x);
+						} else {
+							ref_car_yaw_rad = deg2rad(car_yaw);
+
+							last_car_x = car_x;
+							last_car_y = car_y;
+
+							prev_car_x = last_car_x - cos(ref_car_yaw_rad);
+							prev_car_y = last_car_y - sin(ref_car_yaw_rad);
+						}
+
+						vector<double> next_wp1 = getXY(car_s + 30, road::lane_center(target_lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+						vector<double> next_wp2 = getXY(car_s + 60, road::lane_center(target_lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+						vector<double> next_wp3 = getXY(car_s + 90, road::lane_center(target_lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+
+						vector<double> traj_keypoints_x;
+						vector<double> traj_keypoints_y;
+
+						traj_keypoints_x.push_back(prev_car_x);
+						traj_keypoints_x.push_back(last_car_x);
+						traj_keypoints_x.push_back(next_wp1[0]);
+						traj_keypoints_x.push_back(next_wp2[0]);
+						traj_keypoints_x.push_back(next_wp3[0]);
+
+						traj_keypoints_y.push_back(prev_car_y);
+						traj_keypoints_y.push_back(last_car_y);
+						traj_keypoints_y.push_back(next_wp1[1]);
+						traj_keypoints_y.push_back(next_wp2[1]);
+						traj_keypoints_y.push_back(next_wp3[1]);
+
+						// rotating
+						for (int i=0; i<traj_keypoints_x.size(); i++) {
+							double shift_car_x = traj_keypoints_x[i] - last_car_x;
+							double shift_car_y = traj_keypoints_y[i] - last_car_y;
+
+							traj_keypoints_x[i] = shift_car_x*cos(0-ref_car_yaw_rad) - shift_car_y*sin(0-ref_car_yaw_rad);
+							traj_keypoints_y[i] = shift_car_x*sin(0-ref_car_yaw_rad) + shift_car_y*cos(0-ref_car_yaw_rad);
+						}
+
+						tk::spline s;
+						// currently it is required that X is already sorted
+						s.set_points(traj_keypoints_x, traj_keypoints_y);
+
+						int points_ahead = 50;
+
+						for(int i=0; i<previous_path_x.size(); i++) {
+							next_x_vals.push_back(previous_path_x[i]);
+							next_y_vals.push_back(previous_path_y[i]);	
+						}
+
+						double target_x = 30;
+						double target_y = s(target_x);
+						double target_dist = sqrt(target_x*target_x + target_y*target_y);
+
+						for (int i=0; i<points_ahead-previous_path_x.size(); i++) {
+							double N = target_dist / (.02*target_speed/2.24);
+							double x = (i + 1) * target_x / N;
+							double y = s(x);
+
+							// rotate back to normal
+							double x_norm = x*cos(ref_car_yaw_rad) - y*sin(ref_car_yaw_rad);
+							double y_norm = x*sin(ref_car_yaw_rad) + y*cos(ref_car_yaw_rad);
+
+							x_norm += last_car_x;
+							y_norm += last_car_y;
+
+							next_x_vals.push_back(x_norm);
+							next_y_vals.push_back(y_norm);
 						}
 
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
