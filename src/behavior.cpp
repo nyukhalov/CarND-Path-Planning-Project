@@ -1,6 +1,7 @@
 #include "behavior.h"
 #include "road.h"
 #include "utils.h"
+#include "cost.h"
 
 #include <iostream>
 
@@ -17,7 +18,7 @@ Behavior::Behavior(double pred_horizon_sec, double pred_resolution_sec, double s
 
 Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions)
 {
-    if (true) return naive_plan(self, predictions);
+    // if (true) return naive_plan(self, predictions);
 
     std::cout << "Run behavior planner for state=" << state << std::endl;
     auto sstates = fsm::successor_states(state);
@@ -32,6 +33,7 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
         if (!trajectory.empty())
         {
             double cost = calculate_cost(self, trajectory, predictions);
+            std::cout << state << ": cost=" << cost << std::endl;
             if (cost < min_cost)
             {
                 min_cost = cost;
@@ -68,6 +70,7 @@ vector<Vehicle> Behavior::generate_trajectory(const Vehicle &self, const string 
 vector<Vehicle> Behavior::keep_lane_trajectory(const Vehicle &self, const map<int, vector<Vehicle>> predictions)
 {
     int self_lane = road.get_lane(self.d);
+    // std::cout << "keep_lane_trajectory: self_lane=" << self_lane << std::endl;
     return rough_trajectory(self, predictions, self_lane);
 }
 
@@ -101,16 +104,19 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
     double max_accel = 10; // m/s^2
 
     double target_d = road.lane_center(target_lane);
+    // std::cout << "rough_trajectory: target_d=" << target_d << std::endl;
 
     double car_d = self.d;
     double car_s = self.s;
     double car_v = MPH2mps(self.speed); // convert to velocity in meters per second
 
-    double dt = pred_resolution_sec; // time between iteration
+    double dt = pred_resolution_sec; // time between iterations
 
     int num_iter = pred_horizon_sec / pred_resolution_sec;
-    while (num_iter-- > 0)
+    for(int i=0; i<num_iter; i++)
     {
+        // std::cout << "rough_trajectory: iter=" << i+1 << " car={s=" << car_s << ", d=" << car_d << ", v=" << car_v << "}" << std::endl;
+
         // finding max safe velocity
         double car_v_max = car_v + dt*max_accel;
 
@@ -128,12 +134,16 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
         // calculation
         double dist = car_v * dt;
         double max_dd = dist * cos(deg2rad(max_angle));
-        double dd = fabs(target_d - car_d);
+        double dd = target_d - car_d;
         if (dd > max_dd)
         {
             dd = max_dd;
+        } else if (dd < -max_dd) {
+            dd = -max_dd;
         }
-        double ds = sqrt(dist * dist - dd * dd);
+        double ds = sqrt(dist*dist - dd*dd);
+
+        // std::cout << "dist=" << dist << ", max_dd=" << max_dd << ", dd=" << dd << ", ds=" << ds << std::endl;
 
         car_d += dd;
         car_s += ds;
@@ -151,7 +161,28 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
 
 double Behavior::calculate_cost(const Vehicle &self, const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>> predictions)
 {
-    return 0;
+    double w_collision = 1;
+
+    vector<string> cf_name_list
+    = {"collision_cost"};
+
+    vector< function<double (const vector<Vehicle> &, const map<int, vector<Vehicle>> &)>> cf_list 
+    = {cost::collision_cost};
+
+    vector<double> weight_list = {w_collision};
+
+    double cost = 0;
+    for(int i=0; i<weight_list.size(); i++) {
+        string name = cf_name_list[i];
+        double w = weight_list[i];
+        auto cf = cf_list[i];
+        double c = cf(trajectory, predictions);
+        double weighted_cost = w * c;  
+        cost += weighted_cost;
+        std::cout << name << ": W=" << w << ", cost=" << c << ", weighed_cost=" << weighted_cost << std::endl;
+    } 
+
+    return cost;
 }
 
 Target Behavior::build_target(const vector<Vehicle> &trajectory)
@@ -161,6 +192,10 @@ Target Behavior::build_target(const vector<Vehicle> &trajectory)
     Target t;
     t.lane = road.get_lane(last_state.d);
     t.speed = last_state.speed;
+
+    std::cout << "Build target for vehicle(d=" << last_state.d << "): t.lane=" << t.lane << ", t.speed=" << t.speed << std::endl;
+
+    assert(t.lane != -1);
 
     return t;
 }

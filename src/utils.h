@@ -1,3 +1,6 @@
+#ifndef _UTILS_H_
+#define _UTILS_H_
+
 #include <math.h>
 
 namespace
@@ -24,6 +27,7 @@ double distance(double x1, double y1, double x2, double y2)
 {
 	return sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
 }
+
 int ClosestWaypoint(double x, double y, const vector<double> &maps_x, const vector<double> &maps_y)
 {
 
@@ -146,4 +150,6 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s, const vec
 }
 
 } // namespace utils
-} // namespace
+} // namepace
+
+#endif // _UTILS_H_

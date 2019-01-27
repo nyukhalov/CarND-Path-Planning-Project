@@ -12,6 +12,7 @@
 #include "road.h"
 #include "fsm.h"
 #include "behavior.h"
+#include "prediction.h"
 #include "vehicle.h"
 #include "spline.h"
 #include "utils.h"
@@ -80,6 +81,10 @@ int main()
 		map_waypoints_dy.push_back(d_y);
 	}
 
+	// vehicle's size
+	double car_width = 2.5;
+	double car_length = 4.0;
+
 	int num_lanes = 3;
 	double lane_width = 4.0;
 	double speed_limit = 49.5; // Miles per hour
@@ -87,10 +92,10 @@ int main()
 	double pred_resolution_sec = 0.02; // the same as update frequency (50 updates / sec)
 
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
+	Prediction prediction(road, pred_horizon_sec, pred_resolution_sec);
 	Behavior behavior(pred_horizon_sec, pred_resolution_sec, speed_limit, road);	
 
-	h.onMessage([&road, &behavior](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-																											 uWS::OpCode opCode) {
+	h.onMessage([&road, &prediction, &behavior](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -134,26 +139,9 @@ int main()
 					vector<double> next_y_vals;
 
 					Vehicle self(car_x, car_y, car_s, car_d, car_yaw, car_speed);
-					map<int, vector<Vehicle>> predictions;
-					for (int i = 0; i < sensor_fusion.size(); i++)
-					{
-						auto sf = sensor_fusion[i];
-						// id, x, y, vx, vy, s, d
-						int id = (int)sf[0];
-						double x = sf[1];
-						double y = sf[2];
-						double vx = sf[3];
-						double vy = sf[4];
-						double s = sf[5];
-						double d = sf[6];
-						double speed = sqrt(vx * vx + vy * vy);
-						Vehicle v(x, y, s, d, 0, speed);
-						predictions[id] = {v};
-					}
-
+					auto predictions = prediction.predict(sensor_fusion);
 					Target t = behavior.plan(self, predictions);
 
-					// possible behavior module's output
 					std::cout << "Target: speed=" << t.speed << ", lane=" << t.lane << std::endl;
 
 					int prev_path_size = previous_path_x.size();
