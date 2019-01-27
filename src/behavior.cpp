@@ -28,21 +28,22 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
 
     for (auto it = sstates.begin(); it != sstates.end(); ++it)
     {
-        string state = *it;
-        vector<Vehicle> trajectory = generate_trajectory(self, state, predictions);
+        string s = *it;
+        vector<Vehicle> trajectory = generate_trajectory(self, s, predictions);
         if (!trajectory.empty())
         {
             double cost = calculate_cost(self, trajectory, predictions);
-            std::cout << state << ": cost=" << cost << std::endl;
+            std::cout << s << ": cost=" << cost << std::endl;
             if (cost < min_cost)
             {
                 min_cost = cost;
                 best_trajectory = trajectory;
-                best_state = state;
+                best_state = s;
             }
         }
     }
 
+    this->state = best_state;
     std::cout << "The best next state=" << best_state << std::endl;
     return build_target(best_trajectory);
 };
@@ -88,6 +89,7 @@ vector<Vehicle> Behavior::change_lane_left_trajectory(const Vehicle &self, const
 vector<Vehicle> Behavior::change_lane_right_trajectory(const Vehicle &self, const map<int, vector<Vehicle>> predictions)
 {
     int self_lane = road.get_lane(self.d);
+    assert(self_lane != -1);
 
     // cannot change lane as the vehicle is on the most right lane.
     if (self_lane >= num_lanes - 1)

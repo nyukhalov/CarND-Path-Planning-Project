@@ -1,5 +1,6 @@
 #include "prediction.h"
 #include <math.h>
+#include <iostream>
 #include "utils.h"
 
 Prediction::Prediction(const Road &road, double pred_horizon_sec, double pred_resolution_sec)
@@ -15,7 +16,8 @@ map<int, vector<Vehicle>> Prediction::predict(const vector<vector<double>> &sens
     for (int i = 0; i < sensor_fusion.size(); i++)
     {
         auto sf = parse_sf(sensor_fusion[i]);
-        double speed = sqrt(sf.vx*sf.vx + sf.vy*sf.vy);
+        double vel = sqrt(sf.vx*sf.vx + sf.vy*sf.vy);
+        double speed = utils::mps2MPH(vel);
         auto v = Vehicle(sf.x, sf.y, sf.s, sf.d, 0, speed);
         predictions[sf.id] = predict_vehicle(v);
     }

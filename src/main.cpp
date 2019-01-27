@@ -81,6 +81,8 @@ int main()
 		map_waypoints_dy.push_back(d_y);
 	}
 
+	long iteration = 0L;
+
 	// vehicle's size
 	double car_width = 2.5;
 	double car_length = 4.0;
@@ -95,7 +97,9 @@ int main()
 	Prediction prediction(road, pred_horizon_sec, pred_resolution_sec);
 	Behavior behavior(pred_horizon_sec, pred_resolution_sec, speed_limit, road);	
 
-	h.onMessage([&road, &prediction, &behavior](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+	Target target;
+
+	h.onMessage([&road, &prediction, &behavior, &iteration, &target](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -138,11 +142,16 @@ int main()
 					vector<double> next_x_vals;
 					vector<double> next_y_vals;
 
+					iteration++;
+
 					Vehicle self(car_x, car_y, car_s, car_d, car_yaw, car_speed);
 					auto predictions = prediction.predict(sensor_fusion);
-					Target t = behavior.plan(self, predictions);
-
-					std::cout << "Target: speed=" << t.speed << ", lane=" << t.lane << std::endl;
+					if (iteration <= 1 || iteration % 50 == 0) {
+						std::cout << "Iteration=" << iteration << ". Trigger bahavior planner";
+						Target t = behavior.plan(self, predictions);
+						target = t;
+						std::cout << "Target: speed=" << target.speed << ", lane=" << target.lane << std::endl;
+					}
 
 					int prev_path_size = previous_path_x.size();
 
@@ -172,9 +181,9 @@ int main()
 					}
 
 					double wp_ahead = 90;
-					vector<double> next_wp1 = road.get_xy(car_s + wp_ahead - 60, road.lane_center(t.lane));
-					vector<double> next_wp2 = road.get_xy(car_s + wp_ahead - 30, road.lane_center(t.lane));
-					vector<double> next_wp3 = road.get_xy(car_s + wp_ahead, road.lane_center(t.lane));
+					vector<double> next_wp1 = road.get_xy(car_s + wp_ahead - 60, road.lane_center(target.lane));
+					vector<double> next_wp2 = road.get_xy(car_s + wp_ahead - 30, road.lane_center(target.lane));
+					vector<double> next_wp3 = road.get_xy(car_s + wp_ahead, road.lane_center(target.lane));
 
 					vector<double> traj_keypoints_x;
 					vector<double> traj_keypoints_y;
@@ -219,7 +228,7 @@ int main()
 
 					for (int i = 0; i < points_ahead - previous_path_x.size(); i++)
 					{
-						double N = target_dist / (.02 * t.speed / 2.24);
+						double N = target_dist / (.02 * target.speed / 2.24);
 						double x = (i + 1) * target_x / N;
 						double y = s(x);
 
