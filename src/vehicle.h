@@ -3,16 +3,15 @@
 
 class Vehicle {
 public:
+    Vehicle();
     Vehicle(double x, double y, double s, double d, double yaw, double speed);
-
-    const int get_lane() const;
 
     double x;
     double y;
     double s;
     double d;
     double yaw;
-    double speed;
+    double speed; // vehicle's speed in miles per hour
 };
 
 #endif //_VEHICLE_H_
