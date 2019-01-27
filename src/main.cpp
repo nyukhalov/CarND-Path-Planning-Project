@@ -90,7 +90,7 @@ int main()
 	int num_lanes = 3;
 	double lane_width = 4.0;
 	double speed_limit = 49.5; // Miles per hour
-	double pred_horizon_sec = 2.0;
+	double pred_horizon_sec = 5.0;
 	double pred_resolution_sec = 0.02; // the same as update frequency (50 updates / sec)
 
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
@@ -147,7 +147,7 @@ int main()
 					Vehicle self(car_x, car_y, car_s, car_d, car_yaw, car_speed);
 					auto predictions = prediction.predict(sensor_fusion);
 					if (iteration <= 1 || iteration % 50 == 0) {
-						std::cout << "Iteration=" << iteration << ". Trigger bahavior planner";
+						std::cout << std::endl << "Iteration=" << iteration << ". Trigger bahavior planner" << std::endl;
 						Target t = behavior.plan(self, predictions);
 						target = t;
 						std::cout << "Target: speed=" << target.speed << ", lane=" << target.lane << std::endl;

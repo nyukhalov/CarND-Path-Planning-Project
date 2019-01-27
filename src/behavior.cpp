@@ -33,7 +33,7 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
         if (!trajectory.empty())
         {
             double cost = calculate_cost(self, trajectory, predictions);
-            std::cout << s << ": cost=" << cost << std::endl;
+            std::cout << "plan: ======== " << s << ": cost=" << cost << std::endl;
             if (cost < min_cost)
             {
                 min_cost = cost;
@@ -80,8 +80,10 @@ vector<Vehicle> Behavior::change_lane_left_trajectory(const Vehicle &self, const
     int self_lane = road.get_lane(self.d);
 
     // cannot change lane as the vehicle is on the most left lane.
-    if (self_lane <= 0)
+    if (!road.can_change_lane_left(self_lane)) {
+        std::cout << "change_lane_left_trajectory: cannot change lane: self_lane=" << self_lane << std::endl;
         return {};
+    }
 
     return rough_trajectory(self, predictions, self_lane - 1);
 }
@@ -92,8 +94,10 @@ vector<Vehicle> Behavior::change_lane_right_trajectory(const Vehicle &self, cons
     assert(self_lane != -1);
 
     // cannot change lane as the vehicle is on the most right lane.
-    if (self_lane >= num_lanes - 1)
+    if (!road.can_change_lane_right(self_lane)) {
+        std::cout << "change_lane_right_trajectory: cannot change lane: self_lane=" << self_lane << std::endl;
         return {};
+    }
 
     return rough_trajectory(self, predictions, self_lane + 1);
 }

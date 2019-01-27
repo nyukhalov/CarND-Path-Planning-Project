@@ -21,6 +21,10 @@ public:
 
     vector<double> get_frenet(double x, double y, double theta) const;
 
+    bool can_change_lane_right(int lane) const;
+
+    bool can_change_lane_left(int lane) const;
+
 private:
     double lane_width;
     int num_lanes;

@@ -43,3 +43,13 @@ vector<double> Road::get_xy(double s, double d) const
 vector<double> Road::get_frenet(double x, double y, double theta) const {
     return utils::getFrenet(x, y, theta, wps_x, wps_y);
 }
+
+bool Road::can_change_lane_right(int lane) const
+{
+    return lane < num_lanes - 1;
+}
+
+bool Road::can_change_lane_left(int lane) const
+{
+    return lane > 0;
+}

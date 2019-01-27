@@ -28,7 +28,6 @@ private:
     double pred_resolution_sec;
     double velocity_limit; // max allowed vehicle's velocity in meters per second
     double preferred_buffer;
-    int num_lanes;
     const Road& road;
 
     string state;
