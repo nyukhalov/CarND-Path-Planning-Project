@@ -14,12 +14,20 @@ namespace
 namespace cost
 {
 
-double collision_cost(const Target& target, const vector<Vehicle>& trajectory, const map<int, vector<Vehicle>>& predictions)
+struct cost_context
 {
-    int n_iter = trajectory.size();
+    const Road* road;
+    Target target;
+    vector<Vehicle> trajectory;
+    map<int, vector<Vehicle>> predictions;
+};
+
+double collision_cost(const cost_context& ctx)
+{
+    int n_iter = ctx.trajectory.size();
     for(int i=0; i<n_iter; i++) {
-        auto self = trajectory.at(i);
-        for(auto it=predictions.begin(); it != predictions.end(); ++it) {
+        auto self = ctx.trajectory.at(i);
+        for(auto it=ctx.predictions.begin(); it != ctx.predictions.end(); ++it) {
             auto v = it->second.at(i);
 
             double self_l = self.d - 0.5*Vehicle::WIDTH;
@@ -44,10 +52,17 @@ double collision_cost(const Target& target, const vector<Vehicle>& trajectory, c
     return 0;
 }
 
-double inefficiency_cost(const Target& target, const vector<Vehicle>& trajectory, const map<int, vector<Vehicle>>& predictions)
+double inefficiency_cost(const cost_context& ctx)
 {
     double speed_limit = 50;
-    return (speed_limit - target.speed) / speed_limit;
+    return (speed_limit - ctx.target.speed) / speed_limit;
+}
+
+double change_lane_cost(const cost_context& ctx)
+{
+    Vehicle self = ctx.trajectory.at(0);
+    if (ctx.target.lane != ctx.road->get_lane(self.d)) return 1;
+    return 0;
 }
 
 } // namespace cost    

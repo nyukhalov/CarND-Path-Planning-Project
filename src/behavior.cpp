@@ -206,21 +206,28 @@ double Behavior::calculate_cost(const Vehicle &self, const Target& target, const
 {
     double w_collision = 100;
     double w_inefficiency = 10;
+    double w_change_lane = 1;
 
     vector<string> cf_name_list
-    = {"collision_cost", "inefficiency_cost"};
+    = {"collision_cost", "inefficiency_cost", "change_lane_cost"};
 
-    vector< function<double (const Target&, const vector<Vehicle> &, const map<int, vector<Vehicle>> &)>> cf_list 
-    = {cost::collision_cost, cost::inefficiency_cost};
+    vector< function<double (const cost::cost_context&)>> cf_list 
+    = {cost::collision_cost, cost::inefficiency_cost, cost::change_lane_cost};
 
-    vector<double> weight_list = {w_collision, w_inefficiency};
+    vector<double> weight_list = {w_collision, w_inefficiency, w_change_lane};
+
+    cost::cost_context ctx;
+    ctx.road = &road;
+    ctx.target = target;
+    ctx.trajectory = trajectory;
+    ctx.predictions = predictions;
 
     double cost = 0;
     for(int i=0; i<weight_list.size(); i++) {
         string name = cf_name_list[i];
         double w = weight_list[i];
         auto cf = cf_list[i];
-        double c = cf(target, trajectory, predictions);
+        double c = cf(ctx);
         double weighted_cost = w * c;  
         cost += weighted_cost;
         // std::cout << name << ": W=" << w << ", cost=" << c << ", weighed_cost=" << weighted_cost << std::endl;
