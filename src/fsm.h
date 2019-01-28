@@ -35,9 +35,11 @@ namespace fsm {
         }
         else if (is_CLL(state)) {
            sstates.push_back(STATE_KL); 
+           sstates.push_back(STATE_CLL);
         }
         else if (is_CLR(state)) {
            sstates.push_back(STATE_KL); 
+           sstates.push_back(STATE_CLR);
         }
 
         return sstates;

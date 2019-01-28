@@ -230,7 +230,7 @@ double Behavior::calculate_cost(const Vehicle &self, const Target& target, const
         double c = cf(ctx);
         double weighted_cost = w * c;  
         cost += weighted_cost;
-        // std::cout << name << ": W=" << w << ", cost=" << c << ", weighed_cost=" << weighted_cost << std::endl;
+        std::cout << name << ": W=" << w << ", cost=" << c << ", weighed_cost=" << weighted_cost << std::endl;
     } 
 
     return cost;

@@ -89,7 +89,7 @@ int main()
 	double speed_limit = 49.5; // Miles per hour
 	double pred_horizon_sec = 5.0;
 	double pred_resolution_sec = update_freq_sec; // the same as update frequency (50 updates / sec)
-	double behaviour_interval_sec = 1;
+	double behaviour_interval_sec = 0.5;
 	int behaviour_interval_iter = (int) (behaviour_interval_sec / update_freq_sec);
 
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
