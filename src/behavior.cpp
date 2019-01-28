@@ -7,19 +7,18 @@
 
 using namespace utils;
 
-Behavior::Behavior(double pred_horizon_sec, double pred_resolution_sec, double speed_limit, const Road& road)
+Behavior::Behavior(double pred_horizon_sec, double pred_resolution_sec, double goal_at_sec, double speed_limit, const Road& road)
 : road(road) {
     this->pred_horizon_sec = pred_horizon_sec;
     this->pred_resolution_sec = pred_resolution_sec;
+    this->goal_at_sec = goal_at_sec;
     this->velocity_limit = MPH2mps(speed_limit);
-    this->preferred_buffer = 5.0; // 5 meters
+    this->preferred_buffer = 4; // meters
     this->state = fsm::STATE_KL;
 }
 
 Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions)
 {
-    // if (true) return naive_plan(self, predictions);
-
     std::cout << "Run behavior planner for state=" << state << std::endl;
     auto sstates = fsm::successor_states(state);
     double min_cost = 99999999;
@@ -129,13 +128,17 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
         Vehicle vehicle_ahead;
         Vehicle vehicle_behind;
 
-        // if (get_vehicle_ahead(predictions, self.get_lane(), vehicle_ahead)) {
-        // double ds = vehicle_ahead.s - self.s;
-        // double max_velocity_in_front = (ds - preferred_buffer) + MPH2mps(vehicle_ahead.speed) - 0.5 * max_accel;
-        // car_v = min(min(max_velocity_in_front, car_v_max), velocity_limit);
-        // } else {
+        // std::cout << "rough_trajectory: iter=" << i+1 << " car_v_max=" << car_v_max << ", velocity_limit=" << velocity_limit << std::endl;
         car_v = min(car_v_max, velocity_limit);
-        // }
+
+        if (get_vehicle_ahead(i, car_s, car_d, predictions, vehicle_ahead)) 
+        {
+            double ds = vehicle_ahead.s - car_s;
+            double vehicle_ahead_vel = MPH2mps(vehicle_ahead.speed);
+            double max_velocity_in_front = (ds - preferred_buffer - Vehicle::LENGTH)/dt + vehicle_ahead_vel - 0.5*max_accel;
+            // std::cout << "rough_trajectory: iter=" << i+1 << " max_velocity_in_front=" << max_velocity_in_front << ", car_v=" << car_v << std::endl;
+            car_v = min(max_velocity_in_front, car_v);
+        }
 
         // calculation
         double dist = car_v * dt;
@@ -144,7 +147,9 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
         if (dd > max_dd)
         {
             dd = max_dd;
-        } else if (dd < -max_dd) {
+        } 
+        else if (dd < -max_dd) 
+        {
             dd = -max_dd;
         }
         double ds = sqrt(dist*dist - dd*dd);
@@ -163,6 +168,29 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
     }
 
     return trajectory;    
+}
+
+bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map<int, vector<Vehicle>> predictions, Vehicle& vehicle_ahead) 
+{
+    bool found = false;
+    double distance = 9999999999;
+    for(auto it=predictions.begin(); it != predictions.end(); ++it)
+    {
+        auto v = it->second.at(iter);
+        double dd = abs(v.d - car_d);
+        double ds = v.s - car_s;
+        bool is_further = ds > Vehicle::LENGTH;
+        bool is_near_d = dd <= Vehicle::WIDTH*1.05;
+        if (is_further && is_near_d) 
+        {
+            if (ds < distance) {
+                distance = ds;
+                vehicle_ahead = v;
+                found = true;
+            }
+        }
+    }
+    return found;
 }
 
 double Behavior::calculate_cost(const Vehicle &self, const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>> predictions)
@@ -193,14 +221,19 @@ double Behavior::calculate_cost(const Vehicle &self, const vector<Vehicle> &traj
 
 Target Behavior::build_target(const vector<Vehicle> &trajectory)
 {
-    Vehicle last_state = trajectory[trajectory.size() - 1];
+    int idx = (goal_at_sec / pred_resolution_sec) - 1;
+    assert(idx >= 0 && idx < trajectory.size());
+    Vehicle last_state = trajectory[idx];
 
     Target t;
     t.lane = road.get_lane(last_state.d);
     t.speed = last_state.speed;
 
-    std::cout << "Build target for vehicle(d=" << last_state.d << "): t.lane=" << t.lane << ", t.speed=" << t.speed << std::endl;
+    // std::cout << "Build target for vehicle(d=" << last_state.d << "): t.lane=" << t.lane << ", t.speed=" << t.speed << std::endl;
 
+    if (t.lane == -1) {
+        std::cout << "last_state.d=" << last_state.d << std::endl;
+    }
     assert(t.lane != -1);
 
     return t;
@@ -222,8 +255,10 @@ Target Behavior::naive_plan(const Vehicle &self, map<int, vector<Vehicle>> predi
             if (v.s > self.s)
             {
                 double dist = v.s - self.s;
-                if (dist < min_dist)
+                if (dist < min_dist) 
+                {
                     min_dist = dist;
+                }
             }
         }
     }

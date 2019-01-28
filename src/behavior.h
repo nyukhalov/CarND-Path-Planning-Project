@@ -18,7 +18,7 @@ class Behavior {
 public:
 
     // speed_limit - max allowed vehicle's speed in miles per hour
-    Behavior(double pred_horizon_sec, double pred_resolution_sec, double speed_limit, const Road& road);
+    Behavior(double pred_horizon_sec, double pred_resolution_sec, double goal_at_sec, double speed_limit, const Road& road);
 
     // can plan up to 10 seconds ahead
     Target plan(const Vehicle& self, map<int, vector<Vehicle>> predictions);
@@ -26,6 +26,7 @@ public:
 private:
     double pred_horizon_sec;
     double pred_resolution_sec;
+    double goal_at_sec;
     double velocity_limit; // max allowed vehicle's velocity in meters per second
     double preferred_buffer;
     const Road& road;
@@ -41,6 +42,8 @@ private:
     vector<Vehicle> change_lane_right_trajectory(const Vehicle& self, const map<int, vector<Vehicle>> predictions);
 
     vector<Vehicle> rough_trajectory(const Vehicle& self, const map<int, vector<Vehicle>> predictions, int target_lane);
+
+    bool get_vehicle_ahead(int iter, double car_s, double car_d, const map<int, vector<Vehicle>> predictions, Vehicle& vehicle_ahead);
 
     double calculate_cost(const Vehicle& self, const vector<Vehicle>& trajectory, const map<int, vector<Vehicle>> predictions);
 

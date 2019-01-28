@@ -55,7 +55,8 @@ vector<Vehicle> Prediction::predict_vehicle(const Vehicle& v)
     double car_s = v.s;
     double ds = utils::MPH2mps(v.speed) * dt;
 
-    for(int i=0; i<n_iter; i++) {
+    trajectory.push_back(v);
+    for(int i=0; i<n_iter-1; i++) {
         car_s += ds;
         auto xy = road.get_xy(car_s, car_d);
         auto pred = Vehicle(xy[0], xy[1], car_s, car_d, car_yaw, v.speed);

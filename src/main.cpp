@@ -83,23 +83,22 @@ int main()
 
 	long iteration = 0L;
 
-	// vehicle's size
-	double car_width = 2.5;
-	double car_length = 4.0;
-
+	double update_freq_sec = 0.02;
 	int num_lanes = 3;
 	double lane_width = 4.0;
 	double speed_limit = 49.5; // Miles per hour
 	double pred_horizon_sec = 5.0;
-	double pred_resolution_sec = 0.02; // the same as update frequency (50 updates / sec)
+	double pred_resolution_sec = update_freq_sec; // the same as update frequency (50 updates / sec)
+	double behaviour_interval_sec = 1;
+	int behaviour_interval_iter = (int) (behaviour_interval_sec / update_freq_sec);
 
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 	Prediction prediction(road, pred_horizon_sec, pred_resolution_sec);
-	Behavior behavior(pred_horizon_sec, pred_resolution_sec, speed_limit, road);	
+	Behavior behavior(pred_horizon_sec, pred_resolution_sec, behaviour_interval_sec, speed_limit, road);	
 
 	Target target;
 
-	h.onMessage([&road, &prediction, &behavior, &iteration, &target](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+	h.onMessage([&road, &prediction, &behavior, &iteration, &target, behaviour_interval_iter](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -146,7 +145,7 @@ int main()
 
 					Vehicle self(car_x, car_y, car_s, car_d, car_yaw, car_speed);
 					auto predictions = prediction.predict(sensor_fusion);
-					if (iteration <= 1 || iteration % 50 == 0) {
+					if (iteration <= 1 || iteration % behaviour_interval_iter == 0) {
 						std::cout << std::endl << "Iteration=" << iteration << ". Trigger bahavior planner" << std::endl;
 						Target t = behavior.plan(self, predictions);
 						target = t;
