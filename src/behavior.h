@@ -45,7 +45,7 @@ private:
 
     bool get_vehicle_ahead(int iter, double car_s, double car_d, const map<int, vector<Vehicle>> predictions, Vehicle& vehicle_ahead);
 
-    double calculate_cost(const Vehicle& self, const vector<Vehicle>& trajectory, const map<int, vector<Vehicle>> predictions);
+    double calculate_cost(const Vehicle& self, const Target& target, const vector<Vehicle>& trajectory, const map<int, vector<Vehicle>> predictions);
 
     Target build_target(const vector<Vehicle>& trajectory);
 

@@ -22,8 +22,8 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
     std::cout << "Run behavior planner for state=" << state << std::endl;
     auto sstates = fsm::successor_states(state);
     double min_cost = 99999999;
-    vector<Vehicle> best_trajectory;
     string best_state = fsm::STATE_KL;
+    Target best_target;
 
     for (auto it = sstates.begin(); it != sstates.end(); ++it)
     {
@@ -31,12 +31,15 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
         vector<Vehicle> trajectory = generate_trajectory(self, s, predictions);
         if (!trajectory.empty())
         {
-            double cost = calculate_cost(self, trajectory, predictions);
+            // std::cout << "plan: building target from trajectory for state=" << s << std::endl;
+            // std::cout << "plan: self_car={s=" << self.s << ", d=" << self.d << ", speed=" << self.speed << std::endl;
+            Target target = build_target(trajectory);
+            double cost = calculate_cost(self, target, trajectory, predictions);
             std::cout << "plan: ======== " << s << ": cost=" << cost << std::endl;
             if (cost < min_cost)
             {
                 min_cost = cost;
-                best_trajectory = trajectory;
+                best_target = target;
                 best_state = s;
             }
         }
@@ -44,7 +47,7 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
 
     this->state = best_state;
     std::cout << "The best next state=" << best_state << std::endl;
-    return build_target(best_trajectory);
+    return best_target;
 };
 
 vector<Vehicle> Behavior::generate_trajectory(const Vehicle &self, const string &state, const map<int, vector<Vehicle>> predictions)
@@ -80,7 +83,7 @@ vector<Vehicle> Behavior::change_lane_left_trajectory(const Vehicle &self, const
 
     // cannot change lane as the vehicle is on the most left lane.
     if (!road.can_change_lane_left(self_lane)) {
-        std::cout << "change_lane_left_trajectory: cannot change lane: self_lane=" << self_lane << std::endl;
+        // std::cout << "change_lane_left_trajectory: cannot change lane: self_lane=" << self_lane << std::endl;
         return {};
     }
 
@@ -94,7 +97,7 @@ vector<Vehicle> Behavior::change_lane_right_trajectory(const Vehicle &self, cons
 
     // cannot change lane as the vehicle is on the most right lane.
     if (!road.can_change_lane_right(self_lane)) {
-        std::cout << "change_lane_right_trajectory: cannot change lane: self_lane=" << self_lane << std::endl;
+        // std::cout << "change_lane_right_trajectory: cannot change lane: self_lane=" << self_lane << std::endl;
         return {};
     }
 
@@ -117,13 +120,16 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
 
     double dt = pred_resolution_sec; // time between iterations
 
+    trajectory.push_back(self);
+
     int num_iter = pred_horizon_sec / pred_resolution_sec;
-    for(int i=0; i<num_iter; i++)
+    for(int i=0; i<num_iter-1; i++)
     {
         // std::cout << "rough_trajectory: iter=" << i+1 << " car={s=" << car_s << ", d=" << car_d << ", v=" << car_v << "}" << std::endl;
 
         // finding max safe velocity
         double car_v_max = car_v + dt*max_accel;
+        double car_v_min = car_v - dt*max_accel;
 
         Vehicle vehicle_ahead;
         Vehicle vehicle_behind;
@@ -137,7 +143,10 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
             double vehicle_ahead_vel = MPH2mps(vehicle_ahead.speed);
             double max_velocity_in_front = (ds - preferred_buffer - Vehicle::LENGTH)/dt + vehicle_ahead_vel - 0.5*max_accel;
             // std::cout << "rough_trajectory: iter=" << i+1 << " max_velocity_in_front=" << max_velocity_in_front << ", car_v=" << car_v << std::endl;
-            car_v = min(max_velocity_in_front, car_v);
+            car_v = max(
+                min(max_velocity_in_front, car_v),
+                car_v_min
+            );
         }
 
         // calculation
@@ -179,7 +188,7 @@ bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map
         auto v = it->second.at(iter);
         double dd = abs(v.d - car_d);
         double ds = v.s - car_s;
-        bool is_further = ds > Vehicle::LENGTH;
+        bool is_further = ds > 0;
         bool is_near_d = dd <= Vehicle::WIDTH*1.05;
         if (is_further && is_near_d) 
         {
@@ -193,27 +202,28 @@ bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map
     return found;
 }
 
-double Behavior::calculate_cost(const Vehicle &self, const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>> predictions)
+double Behavior::calculate_cost(const Vehicle &self, const Target& target, const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>> predictions)
 {
-    double w_collision = 1;
+    double w_collision = 100;
+    double w_inefficiency = 10;
 
     vector<string> cf_name_list
-    = {"collision_cost"};
+    = {"collision_cost", "inefficiency_cost"};
 
-    vector< function<double (const vector<Vehicle> &, const map<int, vector<Vehicle>> &)>> cf_list 
-    = {cost::collision_cost};
+    vector< function<double (const Target&, const vector<Vehicle> &, const map<int, vector<Vehicle>> &)>> cf_list 
+    = {cost::collision_cost, cost::inefficiency_cost};
 
-    vector<double> weight_list = {w_collision};
+    vector<double> weight_list = {w_collision, w_inefficiency};
 
     double cost = 0;
     for(int i=0; i<weight_list.size(); i++) {
         string name = cf_name_list[i];
         double w = weight_list[i];
         auto cf = cf_list[i];
-        double c = cf(trajectory, predictions);
+        double c = cf(target, trajectory, predictions);
         double weighted_cost = w * c;  
         cost += weighted_cost;
-        std::cout << name << ": W=" << w << ", cost=" << c << ", weighed_cost=" << weighted_cost << std::endl;
+        // std::cout << name << ": W=" << w << ", cost=" << c << ", weighed_cost=" << weighted_cost << std::endl;
     } 
 
     return cost;
@@ -222,6 +232,7 @@ double Behavior::calculate_cost(const Vehicle &self, const vector<Vehicle> &traj
 Target Behavior::build_target(const vector<Vehicle> &trajectory)
 {
     int idx = (goal_at_sec / pred_resolution_sec) - 1;
+    idx = trajectory.size() - 1;
     assert(idx >= 0 && idx < trajectory.size());
     Vehicle last_state = trajectory[idx];
 
@@ -232,7 +243,12 @@ Target Behavior::build_target(const vector<Vehicle> &trajectory)
     // std::cout << "Build target for vehicle(d=" << last_state.d << "): t.lane=" << t.lane << ", t.speed=" << t.speed << std::endl;
 
     if (t.lane == -1) {
-        std::cout << "last_state.d=" << last_state.d << std::endl;
+        std::cout << "build_target: idx=" << idx << ", last_state.d=" << last_state.d << std::endl;
+        for(int i=0; i<trajectory.size(); i++)
+        {
+            auto v = trajectory.at(i);
+            std::cout << "build_target: iter=" << i << ", car={s=" << v.s << ", d=" << v.d << ", speed=" << v.speed << std::endl; 
+        }
     }
     assert(t.lane != -1);
 

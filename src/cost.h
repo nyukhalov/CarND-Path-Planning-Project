@@ -14,7 +14,7 @@ namespace
 namespace cost
 {
 
-double collision_cost(const vector<Vehicle>& trajectory, const map<int, vector<Vehicle>>& predictions)
+double collision_cost(const Target& target, const vector<Vehicle>& trajectory, const map<int, vector<Vehicle>>& predictions)
 {
     int n_iter = trajectory.size();
     for(int i=0; i<n_iter; i++) {
@@ -42,6 +42,12 @@ double collision_cost(const vector<Vehicle>& trajectory, const map<int, vector<V
     }
     // no collisions
     return 0;
+}
+
+double inefficiency_cost(const Target& target, const vector<Vehicle>& trajectory, const map<int, vector<Vehicle>>& predictions)
+{
+    double speed_limit = 50;
+    return (speed_limit - target.speed) / speed_limit;
 }
 
 } // namespace cost    
