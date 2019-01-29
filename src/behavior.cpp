@@ -4,6 +4,7 @@
 #include "cost.h"
 
 #include <iostream>
+#include <sstream>
 
 using namespace utils;
 
@@ -25,12 +26,23 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
     string best_state = fsm::STATE_KL;
     Target best_target;
 
+    for(auto it=predictions.begin(); it != predictions.end(); ++it)
+    {
+        int id = it->first;
+        auto trajectory = it->second;
+        std::ostringstream stringStream;
+        stringStream << "prediction id=" << id;
+        std::string title = stringStream.str();
+        utils::print_trajectory(title, trajectory);
+    }
+
     for (auto it = sstates.begin(); it != sstates.end(); ++it)
     {
         string s = *it;
         vector<Vehicle> trajectory = generate_trajectory(self, s, predictions);
         if (!trajectory.empty())
         {
+            utils::print_trajectory(s, trajectory);
             // std::cout << "plan: building target from trajectory for state=" << s << std::endl;
             // std::cout << "plan: self_car={s=" << self.s << ", d=" << self.d << ", speed=" << self.speed << std::endl;
             Target target = build_target(trajectory);

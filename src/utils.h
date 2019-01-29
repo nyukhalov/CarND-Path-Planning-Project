@@ -2,11 +2,24 @@
 #define _UTILS_H_
 
 #include <math.h>
+#include <iostream>
+#include "vehicle.h"
 
 namespace
 {
 namespace utils
 {
+
+void print_trajectory(const string& title, const vector<Vehicle>& trajectory)
+{
+    std::cout << title << std::endl;
+    for(int i=0; i<trajectory.size(); i++)
+    {
+        auto v = trajectory.at(i);
+        std::cout << v.s << "," << v.d << "|";
+    }
+    std::cout << std::endl;
+}
 
 // For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }

@@ -49,9 +49,8 @@ vector<Vehicle> Prediction::predict_vehicle(const Vehicle& v)
     vector<Vehicle> trajectory;
 
     double dt = pred_resolution_sec; // time between iterations
-    int cur_lane = road.get_lane(v.d);
     double car_yaw = v.yaw;
-    double car_d = road.lane_center(cur_lane);
+    double car_d = v.d;
     double car_s = v.s;
     double ds = utils::MPH2mps(v.speed) * dt;
 
