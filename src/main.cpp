@@ -162,7 +162,7 @@ int main()
 					double prev_car_x, prev_car_y; // one point before
 					double ref_car_yaw_rad;
 
-					if (prev_path_size > 2)
+					if (prev_path_size >= 2)
 					{
 						last_car_x = previous_path_x[prev_path_size - 1];
 						last_car_y = previous_path_y[prev_path_size - 1];
@@ -183,10 +183,14 @@ int main()
 						prev_car_y = last_car_y - sin(ref_car_yaw_rad);
 					}
 
-					double wp_ahead = 90;
-					vector<double> next_wp1 = road.get_xy(car_s + wp_ahead - 60, road.lane_center(target.lane));
-					vector<double> next_wp2 = road.get_xy(car_s + wp_ahead - 30, road.lane_center(target.lane));
-					vector<double> next_wp3 = road.get_xy(car_s + wp_ahead, road.lane_center(target.lane));
+					double wp_ahead = min(
+						45.0, 
+						max(30.0, 2.0 * cur_velocity)
+					);
+					double wp_d = road.lane_center(target.lane);
+					vector<double> next_wp1 = road.get_xy(car_s + wp_ahead, wp_d);
+					vector<double> next_wp2 = road.get_xy(car_s + wp_ahead + 30, wp_d);
+					vector<double> next_wp3 = road.get_xy(car_s + wp_ahead + 60, wp_d);
 
 					vector<double> traj_keypoints_x;
 					vector<double> traj_keypoints_y;
@@ -204,13 +208,13 @@ int main()
 					traj_keypoints_y.push_back(next_wp3[1]);
 
 					// rotating
-					for (int i = 0; i < traj_keypoints_x.size(); i++)
+					for (int i=0; i<traj_keypoints_x.size(); i++)
 					{
 						double shift_car_x = traj_keypoints_x[i] - last_car_x;
 						double shift_car_y = traj_keypoints_y[i] - last_car_y;
 
-						traj_keypoints_x[i] = shift_car_x * cos(0 - ref_car_yaw_rad) - shift_car_y * sin(0 - ref_car_yaw_rad);
-						traj_keypoints_y[i] = shift_car_x * sin(0 - ref_car_yaw_rad) + shift_car_y * cos(0 - ref_car_yaw_rad);
+						traj_keypoints_x[i] = shift_car_x * cos(0-ref_car_yaw_rad) - shift_car_y * sin(0-ref_car_yaw_rad);
+						traj_keypoints_y[i] = shift_car_x * sin(0-ref_car_yaw_rad) + shift_car_y * cos(0-ref_car_yaw_rad);
 					}
 
 					tk::spline s;
@@ -225,9 +229,9 @@ int main()
 						next_y_vals.push_back(previous_path_y[i]);
 					}
 
-					double target_x = 30;
+					double target_x = 30.0;
 					double target_y = s(target_x);
-					double target_dist = sqrt(target_x * target_x + target_y * target_y);
+					double target_dist = sqrt(target_x*target_x + target_y*target_y);
 
 					double x_acc = 0;
 					for (int i = 0; i < points_ahead - previous_path_x.size(); i++)
@@ -247,8 +251,8 @@ int main()
 						double y = s(x_acc);
 
 						// rotate back to normal
-						double x_norm = x_acc * cos(ref_car_yaw_rad) - y * sin(ref_car_yaw_rad);
-						double y_norm = x_acc * sin(ref_car_yaw_rad) + y * cos(ref_car_yaw_rad);
+						double x_norm = x_acc*cos(ref_car_yaw_rad) - y*sin(ref_car_yaw_rad);
+						double y_norm = x_acc*sin(ref_car_yaw_rad) + y*cos(ref_car_yaw_rad);
 
 						x_norm += last_car_x;
 						y_norm += last_car_y;
