@@ -93,7 +93,6 @@ int main()
 	int behaviour_interval_iter = (int) (behaviour_interval_sec / update_freq_sec);
 
 	double velocity_limit = utils::MPH2mps(speed_limit);
-	double cur_velocity = 0.0;
 	double max_accel = 9.0;
 
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
@@ -102,7 +101,7 @@ int main()
 
 	Target target;
 
-	h.onMessage([&road, &prediction, &behavior, &iteration, &target, &cur_velocity, max_accel, velocity_limit, behaviour_interval_iter, update_freq_sec](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+	h.onMessage([&road, &prediction, &behavior, &iteration, &target, max_accel, velocity_limit, behaviour_interval_iter, update_freq_sec](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -182,7 +181,8 @@ int main()
 						prev_car_x = last_car_x - cos(ref_car_yaw_rad);
 						prev_car_y = last_car_y - sin(ref_car_yaw_rad);
 					}
-
+					
+					double cur_velocity = utils::MPH2mps(car_speed);
 					double wp_ahead = min(
 						45.0, 
 						max(30.0, 2.0 * cur_velocity)
@@ -232,19 +232,21 @@ int main()
 					double target_x = 30.0;
 					double target_y = s(target_x);
 					double target_dist = sqrt(target_x*target_x + target_y*target_y);
+					double target_vel = utils::MPH2mps(target.speed);
 
 					double x_acc = 0;
-					for (int i = 0; i < points_ahead - previous_path_x.size(); i++)
+					for (int i=0; i<points_ahead; i++)
 					{
 						double max_vel = cur_velocity + update_freq_sec*max_accel;
 						double min_vel = cur_velocity - update_freq_sec*max_accel;
-						double target_vel = utils::MPH2mps(target.speed);
 						double vel = min(
 							min(max_vel, target_vel),
 							velocity_limit	
 						);
 						vel = max(vel, min_vel);
 						cur_velocity = vel;
+
+						if (i < previous_path_x.size()) continue;
 
 						double N = target_dist / (update_freq_sec * vel);
 						x_acc += target_x / N;
