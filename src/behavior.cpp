@@ -144,21 +144,32 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
         double car_v_min = car_v - dt*max_accel;
 
         Vehicle vehicle_ahead;
-        Vehicle vehicle_behind;
+        int vehicle_ahead_id;
 
         // std::cout << "rough_trajectory: iter=" << i+1 << " car_v_max=" << car_v_max << ", velocity_limit=" << velocity_limit << std::endl;
         car_v = min(car_v_max, velocity_limit);
 
-        if (get_vehicle_ahead(i, car_s, car_d, predictions, vehicle_ahead)) 
+        if (get_vehicle_ahead(i, car_s, car_d, predictions, &vehicle_ahead_id, vehicle_ahead)) 
         {
-            double ds = vehicle_ahead.s - car_s;
-            double vehicle_ahead_vel = MPH2mps(vehicle_ahead.speed);
-            double max_velocity_in_front = (ds - preferred_buffer - Vehicle::LENGTH)/dt + vehicle_ahead_vel - 0.5*max_accel;
-            // std::cout << "rough_trajectory: iter=" << i+1 << " max_velocity_in_front=" << max_velocity_in_front << ", car_v=" << car_v << std::endl;
-            car_v = max(
-                min(max_velocity_in_front, car_v),
-                car_v_min
-            );
+            double first_s = predictions.at(vehicle_ahead_id).at(0).s;
+            double first_d = predictions.at(vehicle_ahead_id).at(0).d;
+            bool vehicle_was_behind = first_s < self.s;
+            bool vehicle_in_same_lane = road.get_lane(first_d) == road.get_lane(self.d);
+            if (vehicle_was_behind && vehicle_in_same_lane) 
+            {
+                std::cout << "rough_trajectory: iter=" << i+1 << " ignore vehicle id=" << vehicle_ahead_id << " as it's right behind self car" << std::endl;
+            }
+            else 
+            {
+                double ds = vehicle_ahead.s - car_s;
+                double vehicle_ahead_vel = MPH2mps(vehicle_ahead.speed);
+                double max_velocity_in_front = (ds - preferred_buffer - Vehicle::LENGTH)/dt + vehicle_ahead_vel - 0.5*max_accel;
+                // std::cout << "rough_trajectory: iter=" << i+1 << " max_velocity_in_front=" << max_velocity_in_front << ", car_v=" << car_v << std::endl;
+                car_v = max(
+                    min(max_velocity_in_front, car_v),
+                    car_v_min
+                );
+            }
         }
 
         // calculation
@@ -191,7 +202,7 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
     return trajectory;    
 }
 
-bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map<int, vector<Vehicle>> predictions, Vehicle& vehicle_ahead) 
+bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map<int, vector<Vehicle>> predictions, int* id, Vehicle& vehicle_ahead) 
 {
     bool found = false;
     double distance = 9999999999;
@@ -206,6 +217,7 @@ bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map
         {
             if (ds < distance) {
                 distance = ds;
+                *id = it->first;
                 vehicle_ahead = v;
                 found = true;
             }
@@ -251,13 +263,16 @@ double Behavior::calculate_cost(const Vehicle &self, const Target& target, const
 Target Behavior::build_target(const vector<Vehicle> &trajectory)
 {
     int idx = (goal_at_sec / pred_resolution_sec) - 1;
+    int last_idx = trajectory.size() - 1;
     idx = trajectory.size() - 1;
     assert(idx >= 0 && idx < trajectory.size());
-    Vehicle last_state = trajectory[idx];
+
+    Vehicle fut_state = trajectory[idx];
+    Vehicle last_state = trajectory[last_idx];
 
     Target t;
     t.lane = road.get_lane(last_state.d);
-    t.speed = last_state.speed;
+    t.speed = fut_state.speed;
 
     // std::cout << "Build target for vehicle(d=" << last_state.d << "): t.lane=" << t.lane << ", t.speed=" << t.speed << std::endl;
 

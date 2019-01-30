@@ -3,8 +3,8 @@
 
 class Vehicle {
 public:
-    static constexpr double WIDTH = 2.5;
-    static constexpr double LENGTH = 4.0;
+    static constexpr double WIDTH = 2.7;
+    static constexpr double LENGTH = 4.2;
 
     Vehicle();
     Vehicle(double x, double y, double s, double d, double yaw, double speed);

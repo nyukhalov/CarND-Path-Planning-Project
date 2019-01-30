@@ -24,21 +24,23 @@ struct cost_context
 
 double collision_cost(const cost_context& ctx)
 {
+    double width = Vehicle::WIDTH * 1.1;
+    double length = Vehicle::LENGTH * 1.1;
     int n_iter = ctx.trajectory.size();
     for(int i=0; i<n_iter; i++) {
         auto self = ctx.trajectory.at(i);
         for(auto it=ctx.predictions.begin(); it != ctx.predictions.end(); ++it) {
             auto v = it->second.at(i);
 
-            double self_l = self.d - 0.5*Vehicle::WIDTH;
-            double self_r = self.d + 0.5*Vehicle::WIDTH;
-            double self_t = self.s + 0.5*Vehicle::LENGTH;
-            double self_b = self.s - 0.5*Vehicle::LENGTH;
+            double self_l = self.d - 0.5*width;
+            double self_r = self.d + 0.5*width;
+            double self_t = self.s + 0.5*length;
+            double self_b = self.s - 0.5*length;
 
-            double v_l = v.d - 0.5*Vehicle::WIDTH;
-            double v_r = v.d + 0.5*Vehicle::WIDTH;
-            double v_t = v.s + 0.5*Vehicle::LENGTH;
-            double v_b = v.s - 0.5*Vehicle::LENGTH;
+            double v_l = v.d - 0.5*width;
+            double v_r = v.d + 0.5*width;
+            double v_t = v.s + 0.5*length;
+            double v_b = v.s - 0.5*length;
 
             // https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other
             bool is_collision = self_l < v_r && self_r > v_l && self_t > v_b && self_b < v_t;
