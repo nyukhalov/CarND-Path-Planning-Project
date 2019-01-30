@@ -221,7 +221,7 @@ int main()
 					// currently it is required that X is already sorted
 					s.set_points(traj_keypoints_x, traj_keypoints_y);
 
-					int points_ahead = 30;
+					int points_ahead = 20;
 
 					for (int i = 0; i < previous_path_x.size(); i++)
 					{
