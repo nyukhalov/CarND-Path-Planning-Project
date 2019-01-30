@@ -33,7 +33,7 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
         std::ostringstream stringStream;
         stringStream << "prediction id=" << id;
         std::string title = stringStream.str();
-        utils::print_trajectory(title, trajectory);
+        // utils::print_trajectory(title, trajectory);
     }
 
     for (auto it = sstates.begin(); it != sstates.end(); ++it)
@@ -42,12 +42,13 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
         vector<Vehicle> trajectory = generate_trajectory(self, s, predictions);
         if (!trajectory.empty())
         {
-            utils::print_trajectory(s, trajectory);
+            // utils::print_trajectory(s, trajectory);
             // std::cout << "plan: building target from trajectory for state=" << s << std::endl;
             // std::cout << "plan: self_car={s=" << self.s << ", d=" << self.d << ", speed=" << self.speed << std::endl;
             Target target = build_target(trajectory);
             double cost = calculate_cost(self, target, trajectory, predictions);
             std::cout << "plan: ======== " << s << ": cost=" << cost << std::endl;
+            std::cout << "plan: ======== " << s << ": target speed=" << target.speed << ", lane=" << target.lane << std::endl;
             if (cost < min_cost)
             {
                 min_cost = cost;
@@ -120,7 +121,7 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
 {
     vector<Vehicle> trajectory;
 
-    double max_angle = 60; // degrees
+    double max_angle = 45; // degrees
     double max_accel = 10; // m/s^2
 
     double target_d = road.lane_center(target_lane);
@@ -272,7 +273,7 @@ Target Behavior::build_target(const vector<Vehicle> &trajectory)
 
     Target t;
     t.lane = road.get_lane(last_state.d);
-    t.speed = fut_state.speed;
+    t.speed = last_state.speed;
 
     // std::cout << "Build target for vehicle(d=" << last_state.d << "): t.lane=" << t.lane << ", t.speed=" << t.speed << std::endl;
 
