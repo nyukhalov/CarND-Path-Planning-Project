@@ -92,13 +92,17 @@ int main()
 	double behaviour_interval_sec = 0.5;
 	int behaviour_interval_iter = (int) (behaviour_interval_sec / update_freq_sec);
 
+	double velocity_limit = utils::MPH2mps(speed_limit);
+	double cur_velocity = 0.0;
+	double max_accel = 9.0;
+
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 	Prediction prediction(road, pred_horizon_sec, pred_resolution_sec);
-	Behavior behavior(pred_horizon_sec, pred_resolution_sec, behaviour_interval_sec, speed_limit, road);	
+	Behavior behavior(pred_horizon_sec, pred_resolution_sec, behaviour_interval_sec, speed_limit, max_accel, road);	
 
 	Target target;
 
-	h.onMessage([&road, &prediction, &behavior, &iteration, &target, behaviour_interval_iter](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+	h.onMessage([&road, &prediction, &behavior, &iteration, &target, &cur_velocity, max_accel, velocity_limit, behaviour_interval_iter, update_freq_sec](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -225,15 +229,26 @@ int main()
 					double target_y = s(target_x);
 					double target_dist = sqrt(target_x * target_x + target_y * target_y);
 
+					double x_acc = 0;
 					for (int i = 0; i < points_ahead - previous_path_x.size(); i++)
 					{
-						double N = target_dist / (.02 * target.speed / 2.24);
-						double x = (i + 1) * target_x / N;
-						double y = s(x);
+						double max_vel = cur_velocity + update_freq_sec*max_accel;
+						double min_vel = cur_velocity - update_freq_sec*max_accel;
+						double target_vel = utils::MPH2mps(target.speed);
+						double vel = min(
+							min(max_vel, target_vel),
+							velocity_limit	
+						);
+						vel = max(vel, min_vel);
+						cur_velocity = vel;
+
+						double N = target_dist / (update_freq_sec * vel);
+						x_acc += target_x / N;
+						double y = s(x_acc);
 
 						// rotate back to normal
-						double x_norm = x * cos(ref_car_yaw_rad) - y * sin(ref_car_yaw_rad);
-						double y_norm = x * sin(ref_car_yaw_rad) + y * cos(ref_car_yaw_rad);
+						double x_norm = x_acc * cos(ref_car_yaw_rad) - y * sin(ref_car_yaw_rad);
+						double y_norm = x_acc * sin(ref_car_yaw_rad) + y * cos(ref_car_yaw_rad);
 
 						x_norm += last_car_x;
 						y_norm += last_car_y;

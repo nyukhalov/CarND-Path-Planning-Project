@@ -18,7 +18,7 @@ class Behavior {
 public:
 
     // speed_limit - max allowed vehicle's speed in miles per hour
-    Behavior(double pred_horizon_sec, double pred_resolution_sec, double goal_at_sec, double speed_limit, const Road& road);
+    Behavior(double pred_horizon_sec, double pred_resolution_sec, double goal_at_sec, double speed_limit, double max_accel, const Road& road);
 
     // can plan up to 10 seconds ahead
     Target plan(const Vehicle& self, map<int, vector<Vehicle>> predictions);
@@ -28,6 +28,7 @@ private:
     double pred_resolution_sec;
     double goal_at_sec;
     double velocity_limit; // max allowed vehicle's velocity in meters per second
+    double max_accel;
     double preferred_buffer;
     const Road& road;
 

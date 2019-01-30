@@ -8,12 +8,13 @@
 
 using namespace utils;
 
-Behavior::Behavior(double pred_horizon_sec, double pred_resolution_sec, double goal_at_sec, double speed_limit, const Road& road)
+Behavior::Behavior(double pred_horizon_sec, double pred_resolution_sec, double goal_at_sec, double speed_limit, double max_accel, const Road& road)
 : road(road) {
     this->pred_horizon_sec = pred_horizon_sec;
     this->pred_resolution_sec = pred_resolution_sec;
     this->goal_at_sec = goal_at_sec;
     this->velocity_limit = MPH2mps(speed_limit);
+    this->max_accel = max_accel;
     this->preferred_buffer = 4; // meters
     this->state = fsm::STATE_KL;
 }
@@ -122,7 +123,6 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
     vector<Vehicle> trajectory;
 
     double max_angle = 45; // degrees
-    double max_accel = 10; // m/s^2
 
     double target_d = road.lane_center(target_lane);
     // std::cout << "rough_trajectory: target_d=" << target_d << std::endl;
