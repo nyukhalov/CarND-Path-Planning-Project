@@ -8,11 +8,10 @@
 
 using namespace utils;
 
-Behavior::Behavior(double pred_horizon_sec, double pred_resolution_sec, double goal_at_sec, double speed_limit, double max_accel, const Road& road)
+Behavior::Behavior(double pred_horizon_sec, double pred_resolution_sec, double speed_limit, double max_accel, const Road& road)
 : road(road) {
     this->pred_horizon_sec = pred_horizon_sec;
     this->pred_resolution_sec = pred_resolution_sec;
-    this->goal_at_sec = goal_at_sec;
     this->velocity_limit = MPH2mps(speed_limit);
     this->max_accel = max_accel;
     this->preferred_buffer = 4; // meters
@@ -27,6 +26,8 @@ Target Behavior::plan(const Vehicle &self, const map<int, vector<Vehicle>>& pred
     string best_state = fsm::STATE_KL;
     Target best_target;
 
+/*
+    // print prediction trajectories (for debug purposes)
     for(auto it=predictions.begin(); it != predictions.end(); ++it)
     {
         int id = it->first;
@@ -36,7 +37,9 @@ Target Behavior::plan(const Vehicle &self, const map<int, vector<Vehicle>>& pred
         std::string title = stringStream.str();
         // utils::print_trajectory(title, trajectory);
     }
+*/
 
+    // chooses the best trajectory for given successor states.
     for (auto it = sstates.begin(); it != sstates.end(); ++it)
     {
         string s = *it;
@@ -64,6 +67,7 @@ Target Behavior::plan(const Vehicle &self, const map<int, vector<Vehicle>>& pred
     return best_target;
 };
 
+// call the respective method to generate a trajectory
 vector<Vehicle> Behavior::generate_trajectory(const Vehicle &self, const string &state, const map<int, vector<Vehicle>>& predictions)
 {
     vector<Vehicle> trajectory;
@@ -107,7 +111,6 @@ vector<Vehicle> Behavior::change_lane_left_trajectory(const Vehicle &self, const
 vector<Vehicle> Behavior::change_lane_right_trajectory(const Vehicle &self, const map<int, vector<Vehicle>>& predictions)
 {
     int self_lane = road.get_lane(self.d);
-    assert(self_lane != -1);
 
     // cannot change lane as the vehicle is on the most right lane.
     if (!road.can_change_lane_right(self_lane)) {
@@ -120,52 +123,58 @@ vector<Vehicle> Behavior::change_lane_right_trajectory(const Vehicle &self, cons
 
 vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, vector<Vehicle>>& predictions, int target_lane) 
 {
-    vector<Vehicle> trajectory;
-
-    double max_angle = 45; // degrees
-
+    // initial state
     double target_d = road.lane_center(target_lane);
-    // std::cout << "rough_trajectory: target_d=" << target_d << std::endl;
-
     double car_d = self.d;
     double car_s = self.s;
     double car_v = MPH2mps(self.speed); // convert to velocity in meters per second
-
     double dt = pred_resolution_sec; // time between iterations
 
-    trajectory.push_back(self);
+    // std::cout << "rough_trajectory: target_d=" << target_d << std::endl;
+
+    vector<Vehicle> trajectory;
+    trajectory.push_back(self); // always put the current state in the beginning
 
     int num_iter = pred_horizon_sec / pred_resolution_sec;
     for(int i=0; i<num_iter-1; i++)
     {
         // std::cout << "rough_trajectory: iter=" << i+1 << " car={s=" << car_s << ", d=" << car_d << ", v=" << car_v << "}" << std::endl;
 
-        // finding max safe velocity
+        // finding max and min safe velocity
         double car_v_max = car_v + dt*max_accel;
         double car_v_min = car_v - dt*max_accel;
 
-        Vehicle vehicle_ahead;
-        int vehicle_ahead_id;
-
         // std::cout << "rough_trajectory: iter=" << i+1 << " car_v_max=" << car_v_max << ", velocity_limit=" << velocity_limit << std::endl;
+
+        // the ego-car always tries to increase the speed, but never exceed the speed limit
         car_v = min(car_v_max, velocity_limit);
 
+        // finds the fron center vehicle and slows down if there's any.
+        // this is in order to not crash.
+        Vehicle vehicle_ahead;
+        int vehicle_ahead_id;
         if (get_vehicle_ahead(i, car_s, car_d, predictions, &vehicle_ahead_id, vehicle_ahead)) 
         {
             double first_s = predictions.at(vehicle_ahead_id).at(0).s;
             double first_d = predictions.at(vehicle_ahead_id).at(0).d;
+    
             bool vehicle_was_behind = first_s < self.s;
             bool vehicle_in_same_lane = road.get_lane(first_d) == road.get_lane(self.d);
+
+            // ignore vehicles which are right behind the ego-car at the begining.
             if (vehicle_was_behind && vehicle_in_same_lane) 
             {
                 std::cout << "rough_trajectory: iter=" << i+1 << " ignore vehicle id=" << vehicle_ahead_id << " as it's right behind self car" << std::endl;
             }
             else 
             {
+                // finds if we need to slow down and with with speed.
                 double ds = vehicle_ahead.s - car_s;
                 double vehicle_ahead_vel = MPH2mps(vehicle_ahead.speed);
                 double max_velocity_in_front = (ds - preferred_buffer - Vehicle::LENGTH)/dt + vehicle_ahead_vel - 0.5*max_accel;
                 // std::cout << "rough_trajectory: iter=" << i+1 << " max_velocity_in_front=" << max_velocity_in_front << ", car_v=" << car_v << std::endl;
+
+                // limits the minimum velocitu in order to not exceed the max acceleration
                 car_v = max(
                     min(max_velocity_in_front, car_v),
                     car_v_min
@@ -173,18 +182,17 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
             }
         }
 
-        // calculation
-        double dist = car_v * dt;
-        double max_dd = dist * cos(deg2rad(max_angle));
+        // calculating the next position
+        double dist = car_v * dt; // the distance the ego-car will move in time dt going with velocity car_v
+        double max_angle = 45; // degrees
+        double max_dd = dist * cos(deg2rad(max_angle)); // find the maximum d offset
         double dd = target_d - car_d;
-        if (dd > max_dd)
-        {
-            dd = max_dd;
-        } 
-        else if (dd < -max_dd) 
-        {
-            dd = -max_dd;
-        }
+
+        // prevent moving horizontally too much
+        if (dd > max_dd) dd = max_dd;
+        else if (dd < -max_dd) dd = -max_dd;
+        
+        // find the s-position increment
         double ds = sqrt(dist*dist - dd*dd);
 
         // std::cout << "dist=" << dist << ", max_dd=" << max_dd << ", dd=" << dd << ", ds=" << ds << std::endl;
@@ -192,11 +200,9 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
         car_d += dd;
         car_s += ds;
 
-        double car_yaw = self.yaw; // TODO: calculate car's yaw
-
         auto xy = road.get_xy(car_s, car_d);
         double speed = utils::mps2MPH(car_v);
-        auto v = Vehicle(xy[0], xy[1], car_s, car_d, car_yaw, speed);
+        auto v = Vehicle(xy[0], xy[1], car_s, car_d, self.yaw, speed);
         trajectory.push_back(v);
     }
 
@@ -213,10 +219,11 @@ bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map
         double dd = abs(v.d - car_d);
         double ds = v.s - car_s;
         bool is_further = ds > 0;
-        bool is_near_d = dd <= Vehicle::WIDTH*1.05;
+        bool is_near_d = dd <= Vehicle::WIDTH*1.1;
         if (is_further && is_near_d) 
         {
             if (ds < distance) {
+                // this finds the closest front center vehicle
                 distance = ds;
                 *id = it->first;
                 vehicle_ahead = v;
@@ -229,6 +236,7 @@ bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map
 
 double Behavior::calculate_cost(const Vehicle &self, const Target& target, const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>>& predictions)
 {
+    // weights for the respective cost functions
     double w_collision = 100;
     double w_inefficiency = 10;
     double w_change_lane = 1;
@@ -263,12 +271,8 @@ double Behavior::calculate_cost(const Vehicle &self, const Target& target, const
 
 Target Behavior::build_target(const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>>& predictions)
 {
-    int idx = (goal_at_sec / pred_resolution_sec) - 1;
     int last_idx = trajectory.size() - 1;
-    idx = trajectory.size() - 1;
-    assert(idx >= 0 && idx < trajectory.size());
 
-    Vehicle fut_state = trajectory[idx];
     Vehicle last_state = trajectory[last_idx];
     Vehicle self = trajectory[0];
 
@@ -283,6 +287,8 @@ Target Behavior::build_target(const vector<Vehicle> &trajectory, const map<int, 
     {
         double dist = utils::distance(self.s, self.d, veh_ahead.s, veh_ahead.d);
         double max_sensor_range = 45;
+        // if there is a front center car closer than 45 meters
+        // we need to follow the car
         if (dist <= max_sensor_range)
         {
             t.vehicle_id = veh_ahead_id;
@@ -291,49 +297,7 @@ Target Behavior::build_target(const vector<Vehicle> &trajectory, const map<int, 
     }
 
     // std::cout << "Build target for vehicle(d=" << last_state.d << "): t.lane=" << t.lane << ", t.speed=" << t.speed << ", t.vehicle_id=" << t.vehicle_id << std::endl;
-
-    if (t.lane == -1) {
-        std::cout << "build_target: idx=" << idx << ", last_state.d=" << last_state.d << std::endl;
-        for(int i=0; i<trajectory.size(); i++)
-        {
-            auto v = trajectory.at(i);
-            std::cout << "build_target: iter=" << i << ", car={s=" << v.s << ", d=" << v.d << ", speed=" << v.speed << std::endl; 
-        }
-    }
     assert(t.lane != -1);
-
-    return t;
-}
-
-Target Behavior::naive_plan(const Vehicle &self, map<int, vector<Vehicle>>& predictions)
-{
-    Target t;
-    t.lane = 1;
-    t.speed = 50;
-
-    double min_dist = 99999;
-
-    for (map<int, vector<Vehicle>>::iterator it = predictions.begin(); it != predictions.end(); ++it)
-    {
-        Vehicle v = it->second[0];
-        if (road.is_within_lane(t.lane, v.d))
-        {
-            if (v.s > self.s)
-            {
-                double dist = v.s - self.s;
-                if (dist < min_dist) 
-                {
-                    min_dist = dist;
-                }
-            }
-        }
-    }
-
-    if (min_dist < 20)
-    {
-        // t.speed = 30;
-        t.lane = 0;
-    }
 
     return t;
 }

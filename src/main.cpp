@@ -103,7 +103,7 @@ int main()
 	// initialize all modules
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 	Prediction prediction(road, pred_horizon_sec, pred_resolution_sec);
-	Behavior behavior(pred_horizon_sec, pred_resolution_sec, behaviour_interval_sec, speed_limit, max_accel, road);	
+	Behavior behavior(pred_horizon_sec, pred_resolution_sec, speed_limit, max_accel, road);	
 	TrajectoryGenerator traj_gen(road, update_freq_sec, max_accel, speed_limit);
 
 	Target target;
