@@ -31,12 +31,12 @@ Here you can find descriptions of each file:
 
 | File(s) | Purpose |
 |------|---------|
-| `main.cpp` | The entrypoint the project. |
+| `main.cpp` | The entrypoint of the project. |
 | `utils.h` | Contains helper functions used in different places in the project. |
-| `vehicle.h` and `vehicle.cpp` | Describe a vehicle's state such as x, y, s, d coordinates, velocity and yaw. |
+| `vehicle.h` and `vehicle.cpp` | Describes the vehicle's state such as x, y, s, d coordinates, velocity and yaw. |
 | `road.h` and `road.cpp` | Contains a road definition and useful helper methods such as `get_lane_center()`. |
 | `spline.h` | Spline interpolation implementation provided in the classroom. |
-| `json.hpp` | A module for working with JSONs |
+| `json.hpp` | A module for working with JSONs. |
 | `fsm.h` | Defines the Finite State Machine used in the project. |
 | `cost.h` | Contains the cost functions used in the behavior module. |
 | `prediction.h` and `prediction.cpp` | Implementation of the Prediction module. |
@@ -45,7 +45,13 @@ Here you can find descriptions of each file:
 
 ## Prediction
 
+For this project I implemented a naive prediction which assumes that all the non-ego cars will move with contant speed along the s-axis.
+
+In order to implement the logic I iterate over a list of non-ego vehicles provided by the simulator. For each vehicle I calculate its velocity as a squared root of the sum of its velocities along `x-` and `y-` axis: `double speed = sqrt(vx*vx + vy*vy);`. Then I use the speed to calculate the distance the car will move along the `s-` axis in time `dt` where `dt` is defined by the `pred_resolution_sec` variable. The `d-` coordinatate of the car does not change over time as we assume that the car moves strait along the `s-` axis.
+
 ## Behavior Planner
+
+
 
 ### FSM and its states
 
