@@ -1,5 +1,7 @@
 # Path Planning Project writeup
 
+![logo](img/logo.png)
+
 The goal of the project was to develop software for safe driving a car around a virtual highway.
 This writeup describes the approach taken to complete the project.
 
@@ -74,17 +76,19 @@ To generate rough trajectories I implemented a generic function `rough_trajector
 
 ### Cost functions
 
-In order to compare trajectories I defines three cost functions:
+In order to compare trajectories I defines four cost functions:
 - `collision_cost()` - a binary cost function which returns `1` if the given trajectory lead to at least one collision.
+- `maneuver_safety_cost()` - a binary cost function which returns `1` if there're any vehicles on the left(right) side of the ego-car when it starts the left(right) maneuver.
 - `inefficiency_cost()` - the cost becomes higher if the ego-car moves slower.
 - `change_lane_cost()` - adds penalty for a lane change.
 
 The corresponding weights are defined in `behavior.cpp` and choosen as following:
-- `w_collision = 100;`
+- `w_collision = 1000;`
+- `w_maneuver_safety = 100;`
 - `w_inefficiency = 10;`
 - `w_change_lane = 1;`
 
-I wanted the algorithm to focus on safety that's why any collision is a subject of the highest penalty. I also wanted the algorithm to not drive the car too slow, that why the innefficiency cost function has the second highest weight.
+I wanted the algorithm to focus on safety that's why any collision is a subject of the highest penalty. I also wanted the algorithm to not drive the car too slow, that why the innefficiency cost function has the third highest weight.
 
 ### Target
 
