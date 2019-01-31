@@ -65,7 +65,7 @@ double collision_cost(const cost_context& ctx)
  */
 double maneuver_safety_cost(const cost_context& ctx)
 {
-    double s_buff = 2.0; // meter
+    double s_buff = 4.0; // meter
     auto self = ctx.trajectory.at(0);
     int self_lane = ctx.road->get_lane(self.d);
     int target_lane = ctx.target.lane;

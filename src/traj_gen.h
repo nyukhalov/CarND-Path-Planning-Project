@@ -24,7 +24,7 @@ private:
     double update_freq_sec;
     double max_accel;
     double velocity_limit; // velocity in meters per second
-
+    double buffer_fc; // buffer distance (bumber to bumber) to the front center car
     double cur_velocity; // desired ego-car's velocity at i-th iteration
     double dist_fc; // last distance to the front-center vehicle (from bamper to bamper)
 

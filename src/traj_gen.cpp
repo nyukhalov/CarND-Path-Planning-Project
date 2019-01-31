@@ -9,7 +9,7 @@ TrajectoryGenerator::TrajectoryGenerator(const Road &road, double update_freq_se
     this->update_freq_sec = update_freq_sec;
     this->max_accel = max_accel;
     this->velocity_limit = utils::MPH2mps(speed_limit);
-
+    this->buffer_fc = 10.0;
     this->cur_velocity = 0.0;
     this->dist_fc = 0.0;
 }
@@ -94,7 +94,6 @@ vector<Vehicle> TrajectoryGenerator::generate(
             dist_fc = new_dist_fc;
 
             // parameters for calculating target velocity in order to follow the front center vehicle
-            double buffer_fc = 10.0;
             double Kp = 0.5;
             double Kv = 1;
 
@@ -184,7 +183,7 @@ vector<vector<double>> TrajectoryGenerator::get_trajectory_waypoints(
     double last_car_x = last_car_xy[0];
     double last_car_y = last_car_xy[1];
 
-    double wp_ahead = 35;
+    double wp_ahead = 45;
 
     double wp_d = road.lane_center(target.lane);
     vector<double> next_wp1 = road.get_xy(self.s + wp_ahead, wp_d);
