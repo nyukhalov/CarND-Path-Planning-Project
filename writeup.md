@@ -47,13 +47,30 @@ Here you can find descriptions of each file:
 
 For this project I implemented a naive prediction which assumes that all the non-ego cars will move with contant speed along the s-axis.
 
-In order to implement the logic I iterate over a list of non-ego vehicles provided by the simulator. For each vehicle I calculate its velocity as a squared root of the sum of its velocities along `x-` and `y-` axis: `double speed = sqrt(vx*vx + vy*vy);`. Then I use the speed to calculate the distance the car will move along the `s-` axis in time `dt` where `dt` is defined by the `pred_resolution_sec` variable. The `d-` coordinatate of the car does not change over time as we assume that the car moves strait along the `s-` axis.
+In order to implement the logic I iterate over a list of non-ego vehicles provided by the simulator. For each vehicle I calculate its velocity as a squared root of the sum of its velocities along the `x-` and `y-` axises: `double velocity = sqrt(vx*vx + vy*vy);`. Then I use the velocity to calculate the distance the car will move along the `s-` axis in time `dt` where `dt` is defined by the `pred_resolution_sec` variable. The `d-` coordinatate of the car does not change over time as we assume that the car moves straight along the `s-` axis.
 
 ## Behavior Planner
 
-
+The behavior planner developed for this project is based on a finite state machine. At each iteration the planner generates rough trajectories for each successor states of the current FMS's state. Then it finds the best trajectory - a trajectory with the minimal cost value. The best trajectory then transforms into a target object.
 
 ### FSM and its states
+
+The finite state machine has three states:
+- Keep Lane
+- Change Lane Left
+- Change Lane Right
+
+The transitions between the states are shown on the picture below.
+
+![fms](img/fsm.png)
+
+In the **Keep Lane** state the ego-car goes in the middle of its current lane. The car adapts its speed if there is a vehicle ahead of it.
+
+In the **Change Lane Left(Right)** states the ego-car performs a maneuver in order to change its lane on the left(right). In this state the car is also adapts its speed if there is a vehicle ahead of it.
+
+### Rough trajectories
+
+### Target
 
 ## Trajectory Generator
 
