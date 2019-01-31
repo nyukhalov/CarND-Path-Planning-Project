@@ -33,8 +33,9 @@ public:
     // returns true if there's another lane on the left of the given lane.
     bool can_change_lane_left(int lane) const;
 
+    const double lane_width;
+
 private:
-    double lane_width;
     int num_lanes;
     vector<double> wps_x;
     vector<double> wps_y;

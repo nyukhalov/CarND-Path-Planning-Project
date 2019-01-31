@@ -61,6 +61,50 @@ double collision_cost(const cost_context& ctx)
 }
 
 /**
+ * Adds penalty for lane change maneuvers if there're vehicles in the left(right) of the ego-car
+ */
+double maneuver_safety_cost(const cost_context& ctx)
+{
+    double s_buff = 2.0; // meter
+    auto self = ctx.trajectory.at(0);
+    int self_lane = ctx.road->get_lane(self.d);
+    int target_lane = ctx.target.lane;
+    
+    if (self_lane == target_lane) return 0;
+
+    // define a zone in which we don't expect any vehicles when starting maneuver
+    double l = self.d;
+    double r = l + ctx.road->lane_width;
+    double t = self.s + 0.5*Vehicle::LENGTH + s_buff;
+    double b = self.s - 0.5*Vehicle::LENGTH - s_buff;
+
+    // adjust the zone if it is the left maneuver
+    if (target_lane < self_lane)
+    {
+        l -= Vehicle::WIDTH;
+        r -= Vehicle::WIDTH;
+    }
+
+    for(auto it=ctx.predictions.begin(); it != ctx.predictions.end(); ++it)
+    {
+        auto v = it->second.at(0); // the initial position of the vehicle
+        double v_l = v.d - 0.5*Vehicle::WIDTH;
+        double v_r = v.d + 0.5*Vehicle::WIDTH;
+        double v_t = v.s + 0.5*Vehicle::LENGTH;
+        double v_b = v.s - 0.5*Vehicle::LENGTH;
+
+        bool intersects = l <= v_r && r >= v_l && t >= v_b && b <= v_t;
+        if (intersects) 
+        {
+            return 1;
+        }
+    }
+    
+    // all clear, maneuver is safe
+    return 0;
+}
+
+/**
  * Cost becomes higher if the ego-car moves slower.
  */
 double inefficiency_cost(const cost_context& ctx)

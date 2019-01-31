@@ -237,17 +237,18 @@ bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map
 double Behavior::calculate_cost(const Vehicle &self, const Target& target, const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>>& predictions)
 {
     // weights for the respective cost functions
-    double w_collision = 100;
+    double w_collision = 1000;
     double w_inefficiency = 10;
     double w_change_lane = 1;
+    double w_maneuver_safety = 100;
 
     vector<string> cf_name_list
-    = {"collision_cost", "inefficiency_cost", "change_lane_cost"};
+    = {"collision_cost", "inefficiency_cost", "change_lane_cost", "maneuver_safety_cost"};
 
     vector< function<double (const cost::cost_context&)>> cf_list 
-    = {cost::collision_cost, cost::inefficiency_cost, cost::change_lane_cost};
+    = {cost::collision_cost, cost::inefficiency_cost, cost::change_lane_cost, cost::maneuver_safety_cost};
 
-    vector<double> weight_list = {w_collision, w_inefficiency, w_change_lane};
+    vector<double> weight_list = {w_collision, w_inefficiency, w_change_lane, w_maneuver_safety};
 
     cost::cost_context ctx;
     ctx.road = &road;

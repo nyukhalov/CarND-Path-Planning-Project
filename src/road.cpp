@@ -3,9 +3,9 @@
 
 Road::Road(int num_lanes, double lane_width, const vector<double>& wps_x, const vector<double>& wps_y, 
     const vector<double>& wps_s, const vector<double>& wps_dx, const vector<double>& wps_dy)
+: lane_width(lane_width)
 {
     this->num_lanes = num_lanes;
-    this->lane_width = lane_width;
     this->wps_x = wps_x;
     this->wps_y = wps_y;
     this->wps_s = wps_s;
