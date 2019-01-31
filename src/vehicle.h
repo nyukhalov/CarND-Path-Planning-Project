@@ -1,6 +1,7 @@
 #ifndef _VEHICLE_H_
 #define _VEHICLE_H_
 
+// Represents a vehicle
 class Vehicle {
 public:
     static constexpr double WIDTH = 2.7;

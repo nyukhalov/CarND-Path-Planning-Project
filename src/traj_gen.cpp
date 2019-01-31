@@ -14,37 +14,19 @@ TrajectoryGenerator::TrajectoryGenerator(const Road &road, double update_freq_se
     this->dist_fc = 0.0;
 }
 
-vector<Vehicle> TrajectoryGenerator::generate(const vector<Vehicle> &prev_trajectory, const Vehicle &self, const map<int, vector<Vehicle>>& predictions, Target target)
+vector<Vehicle> TrajectoryGenerator::generate(
+    const vector<Vehicle> &prev_trajectory, 
+    const Vehicle &self, 
+    const map<int, vector<Vehicle>>& predictions, 
+    Target target)
 {
+    auto last_positions = get_last_position(prev_trajectory, self);
 
-    int prev_path_size = prev_trajectory.size();
-
-    double last_car_x, last_car_y; // car's position at the end of its last traejctory
-    double prev_car_x, prev_car_y; // one point before
-    double ref_car_yaw_rad;
-
-    if (prev_path_size >= 2)
-    {
-        Vehicle last_veh = prev_trajectory.at(prev_path_size - 1);
-        last_car_x = last_veh.x;
-        last_car_y = last_veh.y;
-
-        Vehicle prev_veh = prev_trajectory.at(prev_path_size - 2);
-        prev_car_x = prev_veh.x;
-        prev_car_y = prev_veh.y;
-
-        ref_car_yaw_rad = atan2(last_car_y - prev_car_y, last_car_x - prev_car_x);
-    }
-    else
-    {
-        ref_car_yaw_rad = utils::deg2rad(self.yaw);
-
-        last_car_x = self.x;
-        last_car_y = self.y;
-
-        prev_car_x = last_car_x - cos(ref_car_yaw_rad);
-        prev_car_y = last_car_y - sin(ref_car_yaw_rad);
-    }
+    double prev_car_x = last_positions[0];
+    double prev_car_y = last_positions[1];
+    double last_car_x = last_positions[2];
+    double last_car_y = last_positions[3];
+    double ref_car_yaw_rad = last_positions[4];
 
     double wp_ahead = min(
         35.0,
@@ -85,6 +67,7 @@ vector<Vehicle> TrajectoryGenerator::generate(const vector<Vehicle> &prev_trajec
     s.set_points(traj_keypoints_x, traj_keypoints_y);
 
     int points_ahead = 10;
+    int prev_path_size = prev_trajectory.size();
 
     vector<Vehicle> trajectory;
     for (int i=0; i<prev_path_size; i++)
@@ -152,4 +135,37 @@ vector<Vehicle> TrajectoryGenerator::generate(const vector<Vehicle> &prev_trajec
         trajectory.push_back(v);
     }
     return trajectory;
+}
+
+vector<double> TrajectoryGenerator::get_last_position(const vector<Vehicle> &prev_trajectory, const Vehicle &self)
+{
+    double last_car_x, last_car_y; // car's position at the end of its last traejctory
+    double prev_car_x, prev_car_y; // one point before
+    double ref_car_yaw_rad;
+
+    int prev_path_size = prev_trajectory.size();
+    if (prev_path_size >= 2)
+    {
+        Vehicle last_veh = prev_trajectory.at(prev_path_size - 1);
+        last_car_x = last_veh.x;
+        last_car_y = last_veh.y;
+
+        Vehicle prev_veh = prev_trajectory.at(prev_path_size - 2);
+        prev_car_x = prev_veh.x;
+        prev_car_y = prev_veh.y;
+
+        ref_car_yaw_rad = atan2(last_car_y - prev_car_y, last_car_x - prev_car_x);
+    }
+    else
+    {
+        ref_car_yaw_rad = utils::deg2rad(self.yaw);
+
+        last_car_x = self.x;
+        last_car_y = self.y;
+
+        prev_car_x = last_car_x - cos(ref_car_yaw_rad);
+        prev_car_y = last_car_y - sin(ref_car_yaw_rad);
+    }
+
+    return {prev_car_x, prev_car_y, last_car_x, last_car_y, ref_car_yaw_rad};
 }
