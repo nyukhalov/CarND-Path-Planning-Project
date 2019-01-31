@@ -113,4 +113,12 @@ The algorithm will try to reach the target velocity as fast as possible taking i
 
 ## Conclusion & Further improvements
 
-what can be improved?
+The developed solution can safely drive a car around a virtual highway. It predicts future vehicles' position in order to not collide with them. The algorithm chooses behavior based on a set of cost function and generated trajectories with respect to the choosen behavior.
+
+Despite it drives well enough to achieve the project's goal there are several things I would like to improve in the future:
+
+- Keep right when possible. This is how would people drive letting other cars to overtake if necessary.
+- Exceed speed and or acceleration threashold in order to avoid collisions.
+- Analyze more than one lane left(right). Being in the most right lane current version of the algorithm will not check whether it makes sense to go the most left lane, though it may be much better position.
+
+The first improvement can be easily done by adding one more cost function while the second and third improvements are a bit more tricky implement right. 
