@@ -94,7 +94,7 @@ vector<Vehicle> TrajectoryGenerator::generate(
             dist_fc = new_dist_fc;
 
             // parameters for calculating target velocity in order to follow the front center vehicle
-            double buffer_fc = 8.0;
+            double buffer_fc = 10.0;
             double Kp = 0.5;
             double Kv = 1;
 

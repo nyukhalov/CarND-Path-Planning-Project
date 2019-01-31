@@ -52,7 +52,7 @@ Target Behavior::plan(const Vehicle &self, const map<int, vector<Vehicle>>& pred
             Target target = build_target(trajectory, predictions);
             double cost = calculate_cost(self, target, trajectory, predictions);
             std::cout << "plan: ======== " << s << ": cost=" << cost << std::endl;
-            // std::cout << "plan: ======== " << s << ": target speed=" << target.speed << ", lane=" << target.lane << std::endl;
+            // std::cout << "plan: ======== " << s << ": target speed=" << target.speed << ", lane=" << target.lane << ", veh_id=" << target.vehicle_id << std::endl;
             if (cost < min_cost)
             {
                 min_cost = cost;

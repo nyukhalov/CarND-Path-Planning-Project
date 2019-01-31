@@ -66,8 +66,15 @@ double collision_cost(const cost_context& ctx)
 double inefficiency_cost(const cost_context& ctx)
 {
     double speed_limit = 50;
-    if (ctx.target.speed > speed_limit) return 1;
-    return (speed_limit - ctx.target.speed) / speed_limit;
+
+    double max_speed_sum = ctx.trajectory.size() * speed_limit;
+    double speed_sum = 0.0;
+    for(auto it=ctx.trajectory.begin(); it != ctx.trajectory.end(); ++it)
+    {
+        speed_sum += it->speed;
+    }
+
+    return (max_speed_sum - speed_sum) / max_speed_sum;
 }
 
 /**
