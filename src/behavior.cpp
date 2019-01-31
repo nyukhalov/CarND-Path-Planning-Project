@@ -282,7 +282,7 @@ Target Behavior::build_target(const vector<Vehicle> &trajectory, const map<int, 
     if (get_vehicle_ahead(0, self.s, last_state.d, predictions, &veh_ahead_id, veh_ahead)) 
     {
         double dist = utils::distance(self.s, self.d, veh_ahead.s, veh_ahead.d);
-        double max_sensor_range = 35;
+        double max_sensor_range = 45;
         if (dist <= max_sensor_range)
         {
             t.vehicle_id = veh_ahead_id;

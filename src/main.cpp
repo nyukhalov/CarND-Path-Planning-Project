@@ -185,7 +185,7 @@ int main()
 					}
 					
 					double wp_ahead = min(
-						45.0, 
+						35.0, 
 						max(30.0, 2.0 * cur_velocity)
 					);
 					double wp_d = road.lane_center(target.lane);
