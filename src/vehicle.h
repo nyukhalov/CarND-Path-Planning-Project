@@ -4,8 +4,8 @@
 // Represents a vehicle
 class Vehicle {
 public:
-    static constexpr double WIDTH = 2.7;
-    static constexpr double LENGTH = 4.2;
+    static constexpr double WIDTH = 3;
+    static constexpr double LENGTH = 4.9;
 
     Vehicle();
     Vehicle(double x, double y, double s, double d, double yaw, double speed);
