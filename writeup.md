@@ -70,6 +70,10 @@ In the **Change Lane Left(Right)** states the ego-car performs a maneuver in ord
 
 ### Rough trajectories
 
+To generate a rough trajectories I implemented a generic function `rough_trajectory`. The function takes in three parameters: current ego-car's state, predictions and target lane. The function will try to generate a rough trajectory from the current car's position to the target lane as far as it can safely go. The algorithms takes into account non-ego vehicles and tries to generate a safe trajectory.
+
+### Cost functions
+
 ### Target
 
 ## Trajectory Generator
