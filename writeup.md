@@ -95,8 +95,22 @@ The output of the Behavior Planner is the target object. The object has three fi
 
 ## Trajectory Generator
 
+At each iteration the Trajectory Generator ensures there are exactly `points_ahead` points in the trajectory sent to the simulator. Its current value is choosen as `10`. Bigger values can lead to delayed actions while smaller values can leave the simulator without any trajectory in case when path planning took longer than expected.
+
 ### Smoothing
 
-## Further improvements
+The Trajectory Generator uses the spline interpolation to get a smooth trajectory from car's current position to its target position. I use the `get_trajectory_waypoints()` method to generate a skeleton of the desired trajectory which is later used as spline input.
+
+Once a smooth path is found the trajectory generator uses the vehicle's motion model to build the output trajectory.
+
+### Motion Model
+
+Trajectory generator assumes a vehicle could have accelaration in the range of `[-max_accel, max_accel]`.
+
+Then it uses the target object provided by the Behavior Planner to find the target velocity. If the target velocity is not given in the target object the Trajectory Generator will calculate it itself.
+
+The algorithm will try to reach the target velocity as fast as possible taking into account constraits such as speed limit and maximum accelaration.
+
+## Conclusion & Further improvements
 
 what can be improved?
