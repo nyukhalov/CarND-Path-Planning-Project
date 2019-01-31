@@ -34,13 +34,14 @@ double collision_cost(const cost_context& ctx)
     int n_iter = ctx.trajectory.size();
     for(int i=0; i<n_iter; i++) {
         auto self = ctx.trajectory.at(i);
+
+        double self_l = self.d - 0.5*width;
+        double self_r = self.d + 0.5*width;
+        double self_t = self.s + 0.5*length;
+        double self_b = self.s - 0.5*length;
+
         for(auto it=ctx.predictions.begin(); it != ctx.predictions.end(); ++it) {
             auto v = it->second.at(i);
-
-            double self_l = self.d - 0.5*width;
-            double self_r = self.d + 0.5*width;
-            double self_t = self.s + 0.5*length;
-            double self_b = self.s - 0.5*length;
 
             double v_l = v.d - 0.5*width;
             double v_r = v.d + 0.5*width;
