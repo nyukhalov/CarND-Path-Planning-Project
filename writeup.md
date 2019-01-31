@@ -88,6 +88,11 @@ I wanted the algorithm to focus on safety that's why any collision is a subject 
 
 ### Target
 
+The output of the Behavior Planner is the target object. The object has three fields:
+- `lane` - target lane. The trajectory generator will need to create a trajectory from current lane to the target lane.
+- `speed` - target speed. It says to trajectory generator to generate trajectories so that ego-car's speed is equal to or very close to the target speed. The value might be negative which means it is up to the trajectory generator to choose the speed.
+- `vehicle_id` - ID of a vehicle to follow. If it is not negative trajectory generator must create trajectories for following the vehicle with this ID.
+
 ## Trajectory Generator
 
 ### Smoothing
