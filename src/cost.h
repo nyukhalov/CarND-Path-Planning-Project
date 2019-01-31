@@ -48,7 +48,7 @@ double collision_cost(const cost_context& ctx)
             double v_b = v.s - 0.5*length;
 
             // https://stackoverflow.com/questions/306316/determine-if-two-rectangles-overlap-each-other
-            bool is_collision = self_l < v_r && self_r > v_l && self_t > v_b && self_b < v_t;
+            bool is_collision = self_l <= v_r && self_r >= v_l && self_t >= v_b && self_b <= v_t;
             if (is_collision) {
                 // std::cout << "collision_cost: detected collision" << std::endl;
                 return 1;
