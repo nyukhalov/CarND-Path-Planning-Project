@@ -71,7 +71,7 @@ double inefficiency_cost(const cost_context& ctx)
 }
 
 /**
- * Applies penalty for a lane change.
+ * Adds penalty for a lane change.
  */
 double change_lane_cost(const cost_context& ctx)
 {

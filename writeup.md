@@ -74,6 +74,18 @@ To generate a rough trajectories I implemented a generic function `rough_traject
 
 ### Cost functions
 
+In order to compare trajectories I defines three cost functions:
+- `collision_cost()` - a binary cost function which returns `1` if the given trajectory lead to at least one collision.
+- `inefficiency_cost()` - the cost becomes higher if the ego-car moves slower.
+- `change_lane_cost()` - adds penalty for a lane change.
+
+The corresponding weights are defined in `behavior.cpp` and choosen as following:
+- `w_collision = 100;`
+- `w_inefficiency = 10;`
+- `w_change_lane = 1;`
+
+I wanted the algorithm to focus on safety that's why any collision is a subject of the highest penalty. I also wanted the algorithm to not drive the car too slow, that why the innefficiency cost function has the second highest weight.
+
 ### Target
 
 ## Trajectory Generator
