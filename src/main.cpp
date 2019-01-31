@@ -83,20 +83,24 @@ int main()
 
 	long iteration = 0L;
 
+	// simulation settings
 	double update_freq_sec = 0.02;
+
+	// road settings
 	int num_lanes = 3;
 	double lane_width = 4.0;
+
+	// driving settings
+	double max_accel = 9.0;
 	double speed_limit = 49.5; // Miles per hour
+	
+	// timing settings
 	double pred_horizon_sec = 5.0;
 	double pred_resolution_sec = update_freq_sec; // the same as update frequency (50 updates / sec)
 	double behaviour_interval_sec = 0.5;
-	int behaviour_interval_iter = (int) (behaviour_interval_sec / update_freq_sec);
+	int behaviour_interval_iter = (int) (behaviour_interval_sec / update_freq_sec);	
 
-	double cur_velocity = 0.0;
-	double velocity_limit = utils::MPH2mps(speed_limit);
-	double max_accel = 9.0;
-	double dist_fc = 0.0;
-
+	// initialize all modules
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 	Prediction prediction(road, pred_horizon_sec, pred_resolution_sec);
 	Behavior behavior(pred_horizon_sec, pred_resolution_sec, behaviour_interval_sec, speed_limit, max_accel, road);	
@@ -104,7 +108,7 @@ int main()
 
 	Target target;
 
-	h.onMessage([&road, &prediction, &behavior, &traj_gen, &iteration, &target, &cur_velocity, &dist_fc, max_accel, velocity_limit, behaviour_interval_iter, update_freq_sec](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+	h.onMessage([&road, &prediction, &behavior, &traj_gen, &iteration, &target, behaviour_interval_iter](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -144,8 +148,13 @@ int main()
 
 					iteration++;
 
+					// ego-car
 					Vehicle self(car_x, car_y, car_s, car_d, car_yaw, car_speed);
+
+					// predict non-ego cars' trajectories
 					auto predictions = prediction.predict(sensor_fusion);
+
+					// run behavior planner every behaviour_interval_iter
 					if (iteration <= 1 || iteration % behaviour_interval_iter == 0) 
 					{
 						std::cout << std::endl << "Iteration=" << iteration << ". Trigger bahavior planner" << std::endl;
@@ -163,6 +172,7 @@ int main()
 						prev_trajectory.push_back(v);
 					}
 
+					// run trajectory generator
 					auto trajectory = traj_gen.generate(prev_trajectory, self, predictions, target);
 
 					vector<double> next_x_vals;
