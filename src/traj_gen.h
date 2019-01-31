@@ -26,7 +26,7 @@ private:
     double velocity_limit; // velocity in meters per second
 
     double cur_velocity; // desired ego-car's velocity at i-th iteration
-    double dist_fc; // last distance to the front-center vehicle
+    double dist_fc; // last distance to the front-center vehicle (from bamper to bamper)
 
     vector<double> get_last_position(const vector<Vehicle> &prev_trajectory, const Vehicle &self);
     vector<vector<double>> get_trajectory_waypoints(const Vehicle &self, vector<double> prev_car_xy, vector<double> last_car_xy, Target target);
