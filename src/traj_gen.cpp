@@ -28,43 +28,23 @@ vector<Vehicle> TrajectoryGenerator::generate(
     double last_car_y = last_positions[3];
     double ref_car_yaw_rad = last_positions[4];
 
-    double wp_ahead = min(
-        35.0,
-        max(30.0, 2.0 * cur_velocity)
-    );
-    double wp_d = road.lane_center(target.lane);
-    vector<double> next_wp1 = road.get_xy(self.s + wp_ahead, wp_d);
-    vector<double> next_wp2 = road.get_xy(self.s + wp_ahead + 30, wp_d);
-    vector<double> next_wp3 = road.get_xy(self.s + wp_ahead + 60, wp_d);
-
-    vector<double> traj_keypoints_x;
-    vector<double> traj_keypoints_y;
-
-    traj_keypoints_x.push_back(prev_car_x);
-    traj_keypoints_x.push_back(last_car_x);
-    traj_keypoints_x.push_back(next_wp1[0]);
-    traj_keypoints_x.push_back(next_wp2[0]);
-    traj_keypoints_x.push_back(next_wp3[0]);
-
-    traj_keypoints_y.push_back(prev_car_y);
-    traj_keypoints_y.push_back(last_car_y);
-    traj_keypoints_y.push_back(next_wp1[1]);
-    traj_keypoints_y.push_back(next_wp2[1]);
-    traj_keypoints_y.push_back(next_wp3[1]);
+    auto traj_waypoints = get_trajectory_waypoints(self, {prev_car_x, prev_car_y}, {last_car_x, last_car_y}, target);
+    auto traj_waypoints_x = traj_waypoints[0];
+    auto traj_waypoints_y = traj_waypoints[1];
 
     // rotating
-    for (int i = 0; i < traj_keypoints_x.size(); i++)
+    for (int i = 0; i < traj_waypoints_x.size(); i++)
     {
-        double shift_car_x = traj_keypoints_x[i] - last_car_x;
-        double shift_car_y = traj_keypoints_y[i] - last_car_y;
+        double shift_car_x = traj_waypoints_x[i] - last_car_x;
+        double shift_car_y = traj_waypoints_y[i] - last_car_y;
 
-        traj_keypoints_x[i] = shift_car_x * cos(0 - ref_car_yaw_rad) - shift_car_y * sin(0 - ref_car_yaw_rad);
-        traj_keypoints_y[i] = shift_car_x * sin(0 - ref_car_yaw_rad) + shift_car_y * cos(0 - ref_car_yaw_rad);
+        traj_waypoints_x[i] = shift_car_x * cos(0 - ref_car_yaw_rad) - shift_car_y * sin(0 - ref_car_yaw_rad);
+        traj_waypoints_y[i] = shift_car_x * sin(0 - ref_car_yaw_rad) + shift_car_y * cos(0 - ref_car_yaw_rad);
     }
 
     tk::spline s;
     // currently it is required that X is already sorted
-    s.set_points(traj_keypoints_x, traj_keypoints_y);
+    s.set_points(traj_waypoints_x, traj_waypoints_y);
 
     int points_ahead = 10;
     int prev_path_size = prev_trajectory.size();
@@ -168,4 +148,41 @@ vector<double> TrajectoryGenerator::get_last_position(const vector<Vehicle> &pre
     }
 
     return {prev_car_x, prev_car_y, last_car_x, last_car_y, ref_car_yaw_rad};
+}
+
+vector<vector<double>> TrajectoryGenerator::get_trajectory_waypoints(
+    const Vehicle &self, 
+    vector<double> prev_car_xy, 
+    vector<double> last_car_xy,
+    Target target
+)
+{
+    double prev_car_x = prev_car_xy[0];
+    double prev_car_y = prev_car_xy[1];
+    double last_car_x = last_car_xy[0];
+    double last_car_y = last_car_xy[1];
+
+    double wp_ahead = 35;
+
+    double wp_d = road.lane_center(target.lane);
+    vector<double> next_wp1 = road.get_xy(self.s + wp_ahead, wp_d);
+    vector<double> next_wp2 = road.get_xy(self.s + wp_ahead + 30, wp_d);
+    vector<double> next_wp3 = road.get_xy(self.s + wp_ahead + 60, wp_d);
+
+    vector<double> traj_waypoints_x;
+    vector<double> traj_waypoints_y;
+
+    traj_waypoints_x.push_back(prev_car_x);
+    traj_waypoints_x.push_back(last_car_x);
+    traj_waypoints_x.push_back(next_wp1[0]);
+    traj_waypoints_x.push_back(next_wp2[0]);
+    traj_waypoints_x.push_back(next_wp3[0]);
+
+    traj_waypoints_y.push_back(prev_car_y);
+    traj_waypoints_y.push_back(last_car_y);
+    traj_waypoints_y.push_back(next_wp1[1]);
+    traj_waypoints_y.push_back(next_wp2[1]);
+    traj_waypoints_y.push_back(next_wp3[1]);
+
+    return {traj_waypoints_x, traj_waypoints_y};
 }

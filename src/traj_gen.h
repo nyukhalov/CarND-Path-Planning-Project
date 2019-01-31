@@ -29,6 +29,7 @@ private:
     double dist_fc; // last distance to the front-center vehicle
 
     vector<double> get_last_position(const vector<Vehicle> &prev_trajectory, const Vehicle &self);
+    vector<vector<double>> get_trajectory_waypoints(const Vehicle &self, vector<double> prev_car_xy, vector<double> last_car_xy, Target target);
 };
 
 #endif // _TRAJ_GEN_H
