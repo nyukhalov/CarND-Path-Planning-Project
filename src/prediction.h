@@ -6,11 +6,18 @@
 #include "road.h"
 #include "vehicle.h"
 
+/**
+ * Prediction module is for predicting non-ego cars' trajectories.
+ */
 class Prediction
 {
 public:
     Prediction(const Road& road, double pred_horizon_sec, double pred_resolution_sec);
 
+    /**
+     * @param sensor_fusion sensor's data received from simulator
+     * @return a map of vehicle ID => its predicted trajectory.
+     */
     map<int, vector<Vehicle>> predict(const vector<vector<double>>& sensor_fusion);
 
 private:
@@ -28,9 +35,15 @@ private:
     double pred_horizon_sec;
     double pred_resolution_sec;
 
+    /**
+     * Parses raw sensor fusion data into an internal structure.
+     */
     SF parse_sf(const vector<double> sf);
 
-    vector<Vehicle> predict_vehicle(const Vehicle& v);
+    /**
+     * Predicts trajectory for the given vehicle v.
+     */
+    vector<Vehicle> predict_trajectory(const Vehicle& v);
 };
 
 #endif // _PREDICTION_H_
