@@ -19,7 +19,7 @@ Behavior::Behavior(double pred_horizon_sec, double pred_resolution_sec, double g
     this->state = fsm::STATE_KL;
 }
 
-Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions)
+Target Behavior::plan(const Vehicle &self, const map<int, vector<Vehicle>>& predictions)
 {
     std::cout << "Run behavior planner for state=" << state << std::endl;
     auto sstates = fsm::successor_states(state);
@@ -46,7 +46,7 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
             // utils::print_trajectory(s, trajectory);
             // std::cout << "plan: building target from trajectory for state=" << s << std::endl;
             // std::cout << "plan: self_car={s=" << self.s << ", d=" << self.d << ", speed=" << self.speed << std::endl;
-            Target target = build_target(trajectory);
+            Target target = build_target(trajectory, predictions);
             double cost = calculate_cost(self, target, trajectory, predictions);
             std::cout << "plan: ======== " << s << ": cost=" << cost << std::endl;
             // std::cout << "plan: ======== " << s << ": target speed=" << target.speed << ", lane=" << target.lane << std::endl;
@@ -64,7 +64,7 @@ Target Behavior::plan(const Vehicle &self, map<int, vector<Vehicle>> predictions
     return best_target;
 };
 
-vector<Vehicle> Behavior::generate_trajectory(const Vehicle &self, const string &state, const map<int, vector<Vehicle>> predictions)
+vector<Vehicle> Behavior::generate_trajectory(const Vehicle &self, const string &state, const map<int, vector<Vehicle>>& predictions)
 {
     vector<Vehicle> trajectory;
 
@@ -84,14 +84,14 @@ vector<Vehicle> Behavior::generate_trajectory(const Vehicle &self, const string 
     return trajectory;
 }
 
-vector<Vehicle> Behavior::keep_lane_trajectory(const Vehicle &self, const map<int, vector<Vehicle>> predictions)
+vector<Vehicle> Behavior::keep_lane_trajectory(const Vehicle &self, const map<int, vector<Vehicle>>& predictions)
 {
     int self_lane = road.get_lane(self.d);
     // std::cout << "keep_lane_trajectory: self_lane=" << self_lane << std::endl;
     return rough_trajectory(self, predictions, self_lane);
 }
 
-vector<Vehicle> Behavior::change_lane_left_trajectory(const Vehicle &self, const map<int, vector<Vehicle>> predictions)
+vector<Vehicle> Behavior::change_lane_left_trajectory(const Vehicle &self, const map<int, vector<Vehicle>>& predictions)
 {
     int self_lane = road.get_lane(self.d);
 
@@ -104,7 +104,7 @@ vector<Vehicle> Behavior::change_lane_left_trajectory(const Vehicle &self, const
     return rough_trajectory(self, predictions, self_lane - 1);
 }
 
-vector<Vehicle> Behavior::change_lane_right_trajectory(const Vehicle &self, const map<int, vector<Vehicle>> predictions)
+vector<Vehicle> Behavior::change_lane_right_trajectory(const Vehicle &self, const map<int, vector<Vehicle>>& predictions)
 {
     int self_lane = road.get_lane(self.d);
     assert(self_lane != -1);
@@ -118,7 +118,7 @@ vector<Vehicle> Behavior::change_lane_right_trajectory(const Vehicle &self, cons
     return rough_trajectory(self, predictions, self_lane + 1);
 }
 
-vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, vector<Vehicle>> predictions, int target_lane) 
+vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, vector<Vehicle>>& predictions, int target_lane) 
 {
     vector<Vehicle> trajectory;
 
@@ -203,7 +203,7 @@ vector<Vehicle> Behavior::rough_trajectory(const Vehicle& self, const map<int, v
     return trajectory;    
 }
 
-bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map<int, vector<Vehicle>> predictions, int* id, Vehicle& vehicle_ahead) 
+bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map<int, vector<Vehicle>>& predictions, int* id, Vehicle& vehicle_ahead) 
 {
     bool found = false;
     double distance = 9999999999;
@@ -227,7 +227,7 @@ bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map
     return found;
 }
 
-double Behavior::calculate_cost(const Vehicle &self, const Target& target, const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>> predictions)
+double Behavior::calculate_cost(const Vehicle &self, const Target& target, const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>>& predictions)
 {
     double w_collision = 100;
     double w_inefficiency = 10;
@@ -261,7 +261,7 @@ double Behavior::calculate_cost(const Vehicle &self, const Target& target, const
     return cost;
 }
 
-Target Behavior::build_target(const vector<Vehicle> &trajectory)
+Target Behavior::build_target(const vector<Vehicle> &trajectory, const map<int, vector<Vehicle>>& predictions)
 {
     int idx = (goal_at_sec / pred_resolution_sec) - 1;
     int last_idx = trajectory.size() - 1;
@@ -270,12 +270,28 @@ Target Behavior::build_target(const vector<Vehicle> &trajectory)
 
     Vehicle fut_state = trajectory[idx];
     Vehicle last_state = trajectory[last_idx];
+    Vehicle self = trajectory[0];
 
     Target t;
     t.lane = road.get_lane(last_state.d);
     t.speed = last_state.speed;
+    t.vehicle_id = -1;
 
-    // std::cout << "Build target for vehicle(d=" << last_state.d << "): t.lane=" << t.lane << ", t.speed=" << t.speed << std::endl;
+    int veh_ahead_id;
+    Vehicle veh_ahead;
+    if (get_vehicle_ahead(0, self.s, self.d, predictions, &veh_ahead_id, veh_ahead)) 
+    {
+        double dist = utils::distance(self.s, self.d, veh_ahead.s, veh_ahead.d);
+        std::cout << "dist=" << dist << std::endl;
+        double max_sensor_range = 35;
+        if (dist <= max_sensor_range)
+        {
+            t.vehicle_id = veh_ahead_id;
+            t.speed = -1;
+        }
+    }
+
+    // std::cout << "Build target for vehicle(d=" << last_state.d << "): t.lane=" << t.lane << ", t.speed=" << t.speed << ", t.vehicle_id=" << t.vehicle_id << std::endl;
 
     if (t.lane == -1) {
         std::cout << "build_target: idx=" << idx << ", last_state.d=" << last_state.d << std::endl;
@@ -290,7 +306,7 @@ Target Behavior::build_target(const vector<Vehicle> &trajectory)
     return t;
 }
 
-Target Behavior::naive_plan(const Vehicle &self, map<int, vector<Vehicle>> predictions)
+Target Behavior::naive_plan(const Vehicle &self, map<int, vector<Vehicle>>& predictions)
 {
     Target t;
     t.lane = 1;

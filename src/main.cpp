@@ -95,6 +95,7 @@ int main()
 	double cur_velocity = 0.0;
 	double velocity_limit = utils::MPH2mps(speed_limit);
 	double max_accel = 9.0;
+	double dist_fc = 0.0;
 
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 	Prediction prediction(road, pred_horizon_sec, pred_resolution_sec);
@@ -102,7 +103,7 @@ int main()
 
 	Target target;
 
-	h.onMessage([&road, &prediction, &behavior, &iteration, &target, &cur_velocity, max_accel, velocity_limit, behaviour_interval_iter, update_freq_sec](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+	h.onMessage([&road, &prediction, &behavior, &iteration, &target, &cur_velocity, &dist_fc, max_accel, velocity_limit, behaviour_interval_iter, update_freq_sec](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -153,7 +154,7 @@ int main()
 						std::cout << std::endl << "Iteration=" << iteration << ". Trigger bahavior planner" << std::endl;
 						Target t = behavior.plan(self, predictions);
 						target = t;
-						std::cout << "Target: speed=" << target.speed << ", lane=" << target.lane << std::endl;
+						std::cout << "Target: speed=" << target.speed << ", lane=" << target.lane << ", vehicle_id=" << target.vehicle_id << std::endl;
 					}
 
 					int prev_path_size = previous_path_x.size();
@@ -221,7 +222,7 @@ int main()
 					// currently it is required that X is already sorted
 					s.set_points(traj_keypoints_x, traj_keypoints_y);
 
-					int points_ahead = 20;
+					int points_ahead = 10;
 
 					for (int i = 0; i < previous_path_x.size(); i++)
 					{
@@ -232,11 +233,38 @@ int main()
 					double target_x = 30.0;
 					double target_y = s(target_x);
 					double target_dist = sqrt(target_x*target_x + target_y*target_y);
-					double target_vel = utils::MPH2mps(target.speed);
 
+					double target_vel = utils::MPH2mps(target.speed);
+					double cur_car_x = last_car_x;
+					double cur_car_y = last_car_y;
 					double x_acc = 0;
 					for (int i=0; i<points_ahead-previous_path_x.size(); i++)
 					{
+						int iter = previous_path_x.size() + i;
+						if (target.vehicle_id >= 0) 
+						{
+							auto traj = predictions.at(target.vehicle_id);
+							Vehicle veh = traj[iter];
+							// dist_fc = distance from bamper to bamper
+							double new_dist_fc = utils::distance(cur_car_x, cur_car_y, veh.x, veh.y) - Vehicle::LENGTH;
+							if (dist_fc == 0) dist_fc = new_dist_fc;
+							double v_fc = (new_dist_fc - dist_fc) / update_freq_sec;
+							dist_fc = new_dist_fc;
+							double buffer_fc = 8.0;
+							double Kp = 0.5;
+							double Kv = 1;
+
+							double dist_to_go = dist_fc-buffer_fc;
+							double accel = Kp*dist_to_go + Kv*v_fc;
+							target_vel = cur_velocity + update_freq_sec*accel;
+
+							std::cout << "iter=" << iter << ", dist_to_go=" << dist_to_go << ", dist_fc=" << dist_fc << ", v_fc=" << v_fc << ", accel=" << accel << ", target_vel=" << target_vel << std::endl;
+						} 
+						else
+						{
+							dist_fc = 0.0;
+						}
+
 						double max_vel = cur_velocity + update_freq_sec*max_accel;
 						double min_vel = cur_velocity - update_freq_sec*max_accel;
 						double vel = min(
@@ -254,11 +282,11 @@ int main()
 						double x_norm = x_acc*cos(ref_car_yaw_rad) - y*sin(ref_car_yaw_rad);
 						double y_norm = x_acc*sin(ref_car_yaw_rad) + y*cos(ref_car_yaw_rad);
 
-						x_norm += last_car_x;
-						y_norm += last_car_y;
+						cur_car_x = x_norm + last_car_x;
+						cur_car_y = y_norm + last_car_y;
 
-						next_x_vals.push_back(x_norm);
-						next_y_vals.push_back(y_norm);
+						next_x_vals.push_back(cur_car_x);
+						next_y_vals.push_back(cur_car_y);
 					}
 
 					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
