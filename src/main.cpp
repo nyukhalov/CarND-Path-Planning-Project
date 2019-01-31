@@ -258,7 +258,7 @@ int main()
 							double accel = Kp*dist_to_go + Kv*v_fc;
 							target_vel = cur_velocity + update_freq_sec*accel;
 
-							std::cout << "iter=" << iter << ", dist_to_go=" << dist_to_go << ", dist_fc=" << dist_fc << ", v_fc=" << v_fc << ", accel=" << accel << ", target_vel=" << target_vel << std::endl;
+							// std::cout << "iter=" << iter << ", dist_to_go=" << dist_to_go << ", dist_fc=" << dist_fc << ", v_fc=" << v_fc << ", accel=" << accel << ", target_vel=" << target_vel << std::endl;
 						} 
 						else
 						{
