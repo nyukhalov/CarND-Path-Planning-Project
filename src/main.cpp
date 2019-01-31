@@ -13,8 +13,8 @@
 #include "fsm.h"
 #include "behavior.h"
 #include "prediction.h"
+#include "traj_gen.h"
 #include "vehicle.h"
-#include "spline.h"
 #include "utils.h"
 
 using namespace std;
@@ -100,10 +100,11 @@ int main()
 	Road road(num_lanes, lane_width, map_waypoints_x, map_waypoints_y, map_waypoints_s, map_waypoints_dx, map_waypoints_dy);
 	Prediction prediction(road, pred_horizon_sec, pred_resolution_sec);
 	Behavior behavior(pred_horizon_sec, pred_resolution_sec, behaviour_interval_sec, speed_limit, max_accel, road);	
+	TrajectoryGenerator traj_gen(road, update_freq_sec, max_accel, speed_limit);
 
 	Target target;
 
-	h.onMessage([&road, &prediction, &behavior, &iteration, &target, &cur_velocity, &dist_fc, max_accel, velocity_limit, behaviour_interval_iter, update_freq_sec](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+	h.onMessage([&road, &prediction, &behavior, &traj_gen, &iteration, &target, &cur_velocity, &dist_fc, max_accel, velocity_limit, behaviour_interval_iter, update_freq_sec](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 		// "42" at the start of the message means there's a websocket message event.
 		// The 4 signifies a websocket message
 		// The 2 signifies a websocket event
@@ -141,155 +142,38 @@ int main()
 					// Sensor Fusion Data, a list of all other cars on the same side of the road.
 					auto sensor_fusion = j[1]["sensor_fusion"];
 
-					json msgJson;
-
-					vector<double> next_x_vals;
-					vector<double> next_y_vals;
-
 					iteration++;
 
 					Vehicle self(car_x, car_y, car_s, car_d, car_yaw, car_speed);
 					auto predictions = prediction.predict(sensor_fusion);
-					if (iteration <= 1 || iteration % behaviour_interval_iter == 0) {
+					if (iteration <= 1 || iteration % behaviour_interval_iter == 0) 
+					{
 						std::cout << std::endl << "Iteration=" << iteration << ". Trigger bahavior planner" << std::endl;
 						Target t = behavior.plan(self, predictions);
 						target = t;
 						std::cout << "Target: speed=" << target.speed << ", lane=" << target.lane << ", vehicle_id=" << target.vehicle_id << std::endl;
 					}
 
-					int prev_path_size = previous_path_x.size();
-
-					double last_car_x, last_car_y; // car's position at the end of its last traejctory
-					double prev_car_x, prev_car_y; // one point before
-					double ref_car_yaw_rad;
-
-					if (prev_path_size >= 2)
+					vector<Vehicle> prev_trajectory;
+					for(int i=0; i<previous_path_x.size(); i++)
 					{
-						last_car_x = previous_path_x[prev_path_size - 1];
-						last_car_y = previous_path_y[prev_path_size - 1];
-
-						prev_car_x = previous_path_x[prev_path_size - 2];
-						prev_car_y = previous_path_y[prev_path_size - 2];
-
-						ref_car_yaw_rad = atan2(last_car_y - prev_car_y, last_car_x - prev_car_x);
-					}
-					else
-					{
-						ref_car_yaw_rad = deg2rad(car_yaw);
-
-						last_car_x = car_x;
-						last_car_y = car_y;
-
-						prev_car_x = last_car_x - cos(ref_car_yaw_rad);
-						prev_car_y = last_car_y - sin(ref_car_yaw_rad);
-					}
-					
-					double wp_ahead = min(
-						35.0, 
-						max(30.0, 2.0 * cur_velocity)
-					);
-					double wp_d = road.lane_center(target.lane);
-					vector<double> next_wp1 = road.get_xy(car_s + wp_ahead, wp_d);
-					vector<double> next_wp2 = road.get_xy(car_s + wp_ahead + 30, wp_d);
-					vector<double> next_wp3 = road.get_xy(car_s + wp_ahead + 60, wp_d);
-
-					vector<double> traj_keypoints_x;
-					vector<double> traj_keypoints_y;
-
-					traj_keypoints_x.push_back(prev_car_x);
-					traj_keypoints_x.push_back(last_car_x);
-					traj_keypoints_x.push_back(next_wp1[0]);
-					traj_keypoints_x.push_back(next_wp2[0]);
-					traj_keypoints_x.push_back(next_wp3[0]);
-
-					traj_keypoints_y.push_back(prev_car_y);
-					traj_keypoints_y.push_back(last_car_y);
-					traj_keypoints_y.push_back(next_wp1[1]);
-					traj_keypoints_y.push_back(next_wp2[1]);
-					traj_keypoints_y.push_back(next_wp3[1]);
-
-					// rotating
-					for (int i=0; i<traj_keypoints_x.size(); i++)
-					{
-						double shift_car_x = traj_keypoints_x[i] - last_car_x;
-						double shift_car_y = traj_keypoints_y[i] - last_car_y;
-
-						traj_keypoints_x[i] = shift_car_x * cos(0-ref_car_yaw_rad) - shift_car_y * sin(0-ref_car_yaw_rad);
-						traj_keypoints_y[i] = shift_car_x * sin(0-ref_car_yaw_rad) + shift_car_y * cos(0-ref_car_yaw_rad);
+						double x = previous_path_x[i];
+						double y = previous_path_y[i];
+						auto v = Vehicle(x, y, -1, -1, -1, -1);
+						prev_trajectory.push_back(v);
 					}
 
-					tk::spline s;
-					// currently it is required that X is already sorted
-					s.set_points(traj_keypoints_x, traj_keypoints_y);
+					auto trajectory = traj_gen.generate(prev_trajectory, self, predictions, target);
 
-					int points_ahead = 10;
-
-					for (int i = 0; i < previous_path_x.size(); i++)
+					vector<double> next_x_vals;
+					vector<double> next_y_vals;
+					for(auto it=trajectory.begin(); it != trajectory.end(); ++it)
 					{
-						next_x_vals.push_back(previous_path_x[i]);
-						next_y_vals.push_back(previous_path_y[i]);
+						next_x_vals.push_back(it->x);
+						next_y_vals.push_back(it->y);
 					}
 
-					double target_x = 30.0;
-					double target_y = s(target_x);
-					double target_dist = sqrt(target_x*target_x + target_y*target_y);
-
-					double target_vel = utils::MPH2mps(target.speed);
-					double cur_car_x = last_car_x;
-					double cur_car_y = last_car_y;
-					double x_acc = 0;
-					for (int i=0; i<points_ahead-previous_path_x.size(); i++)
-					{
-						int iter = previous_path_x.size() + i;
-						if (target.vehicle_id >= 0) 
-						{
-							auto traj = predictions.at(target.vehicle_id);
-							Vehicle veh = traj[iter];
-							// dist_fc = distance from bamper to bamper
-							double new_dist_fc = utils::distance(cur_car_x, cur_car_y, veh.x, veh.y) - Vehicle::LENGTH;
-							if (dist_fc == 0) dist_fc = new_dist_fc;
-							double v_fc = (new_dist_fc - dist_fc) / update_freq_sec;
-							dist_fc = new_dist_fc;
-							double buffer_fc = 8.0;
-							double Kp = 0.5;
-							double Kv = 1;
-
-							double dist_to_go = dist_fc-buffer_fc;
-							double accel = Kp*dist_to_go + Kv*v_fc;
-							target_vel = cur_velocity + update_freq_sec*accel;
-
-							// std::cout << "iter=" << iter << ", dist_to_go=" << dist_to_go << ", dist_fc=" << dist_fc << ", v_fc=" << v_fc << ", accel=" << accel << ", target_vel=" << target_vel << std::endl;
-						} 
-						else
-						{
-							dist_fc = 0.0;
-						}
-
-						double max_vel = cur_velocity + update_freq_sec*max_accel;
-						double min_vel = cur_velocity - update_freq_sec*max_accel;
-						double vel = min(
-							min(max_vel, target_vel),
-							velocity_limit	
-						);
-						vel = max(vel, min_vel);
-						cur_velocity = vel;
-
-						double N = target_dist / (update_freq_sec * vel);
-						x_acc += target_x / N;
-						double y = s(x_acc);
-
-						// rotate back to normal
-						double x_norm = x_acc*cos(ref_car_yaw_rad) - y*sin(ref_car_yaw_rad);
-						double y_norm = x_acc*sin(ref_car_yaw_rad) + y*cos(ref_car_yaw_rad);
-
-						cur_car_x = x_norm + last_car_x;
-						cur_car_y = y_norm + last_car_y;
-
-						next_x_vals.push_back(cur_car_x);
-						next_y_vals.push_back(cur_car_y);
-					}
-
-					// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+					json msgJson;
 					msgJson["next_x"] = next_x_vals;
 					msgJson["next_y"] = next_y_vals;
 
