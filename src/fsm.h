@@ -9,6 +9,9 @@ using namespace std;
 namespace {
 namespace fsm {
 
+    /**
+     * The FSM consists of the three following states
+     */
     string STATE_KL = "KL"; // keep lane
     string STATE_CLL = "CLL"; // change lane left
     string STATE_CLR = "CLR"; // change lane right
@@ -25,6 +28,9 @@ namespace fsm {
         return state.compare(STATE_CLR) == 0;
     }
 
+    /**
+     * Returns successor state for the given state.
+     */
     vector<string> successor_states(const string& state) {
         vector<string> sstates;
 

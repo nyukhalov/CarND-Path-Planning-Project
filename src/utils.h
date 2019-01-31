@@ -10,6 +10,7 @@ namespace
 namespace utils
 {
 
+// prints the given trajectory. useful for debugging
 void print_trajectory(const string& title, const vector<Vehicle>& trajectory)
 {
     std::cout << title << std::endl;
@@ -26,13 +27,15 @@ constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
-// converts velocity given in miles per hour to meters per second
+// converts velocity given in miles per hour to meters per second.
 double MPH2mps(double MPH)
 {
     return MPH / 2.24;
 }
 
-double mps2MPH(double mps) {
+// converts velocity from meters per second to miles per hour.
+double mps2MPH(double mps) 
+{
     return 2.24 * mps;
 }
 
