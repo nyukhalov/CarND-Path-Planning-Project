@@ -5,11 +5,11 @@ This writeup describes the approach taken to complete the project.
 
 ## Design
 
-The design was choosen with respect to the giagram shown in the classroom.
+The design was choosen with respect to the diagram shown in the classroom.
 
 ![text](img/components.png)
 
-The projects has three main components listed below:
+The project has three main components listed below:
 - Prediction
 - Behavior Planner
 - Trajectory Generator
@@ -20,7 +20,7 @@ The Localization, Sensor Fusion and Motion Control components were not implement
 
 The developed software runs an infinite loop; at each iteration it takes in the output of the simulator and produces a trajectory for ego-car which is sent back to the simulator.
 
-A highlevel data-flow diagram is presented below:
+A highlevel data-flow diagram is shown below:
 
 ![data flow](img/data-flow.png)
 
@@ -45,7 +45,7 @@ Here you can find descriptions of each file:
 
 ## Prediction
 
-For this project I implemented a naive prediction which assumes that all the non-ego cars will move with contant speed along the s-axis.
+For this project I implemented a naive prediction which assumes that all the non-ego cars will move with contant speed along the `s-` axis.
 
 In order to implement the logic I iterate over a list of non-ego vehicles provided by the simulator. For each vehicle I calculate its velocity as a squared root of the sum of its velocities along the `x-` and `y-` axises: `double velocity = sqrt(vx*vx + vy*vy);`. Then I use the velocity to calculate the distance the car will move along the `s-` axis in time `dt` where `dt` is defined by the `pred_resolution_sec` variable. The `d-` coordinatate of the car does not change over time as we assume that the car moves straight along the `s-` axis.
 
@@ -56,9 +56,9 @@ The behavior planner developed for this project is based on a finite state machi
 ### FSM and its states
 
 The finite state machine has three states:
-- Keep Lane
-- Change Lane Left
-- Change Lane Right
+- Keep Lane (KL)
+- Change Lane Left (CLL)
+- Change Lane Right (CLR)
 
 The transitions between the states are shown on the picture below.
 
@@ -70,7 +70,7 @@ In the **Change Lane Left(Right)** states the ego-car performs a maneuver in ord
 
 ### Rough trajectories
 
-To generate a rough trajectories I implemented a generic function `rough_trajectory`. The function takes in three parameters: current ego-car's state, predictions and target lane. The function will try to generate a rough trajectory from the current car's position to the target lane as far as it can safely go. The algorithms takes into account non-ego vehicles and tries to generate a safe trajectory.
+To generate rough trajectories I implemented a generic function `rough_trajectory()`. The function takes in three parameters: current ego-car's state, predictions and target lane. The function will try to generate a rough trajectory from the current car's position to the target lane as far as it can safely go. The algorithms takes into account non-ego vehicles and tries to generate a safe trajectory.
 
 ### Cost functions
 
@@ -117,8 +117,8 @@ The developed solution can safely drive a car around a virtual highway. It predi
 
 Despite it drives well enough to achieve the project's goal there are several things I would like to improve in the future:
 
-- Keep right when possible. This is how would people drive letting other cars to overtake if necessary.
-- Exceed speed and or acceleration threashold in order to avoid collisions.
+- Keep right when possible. This is how people woudl drive, letting other cars to overtake if necessary.
+- Exceed speed and/or acceleration threshold in order to avoid collisions.
 - Analyze more than one lane left(right). Being in the most right lane current version of the algorithm will not check whether it makes sense to go the most left lane, though it may be much better position.
 
-The first improvement can be easily done by adding one more cost function while the second and third improvements are a bit more tricky implement right. 
+The first improvement can be easily done by adding one more cost function while the second and third improvements are a bit more tricky to implement right. 
