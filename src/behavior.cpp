@@ -5,6 +5,8 @@
 
 #include <iostream>
 #include <sstream>
+#include <assert.h>
+#include <functional>
 
 using namespace utils;
 
@@ -216,7 +218,7 @@ bool Behavior::get_vehicle_ahead(int iter, double car_s, double car_d, const map
     for(auto it=predictions.begin(); it != predictions.end(); ++it)
     {
         auto v = it->second.at(iter);
-        double dd = abs(v.d - car_d);
+        double dd = fabs(v.d - car_d);
         double ds = v.s - car_s;
         bool is_further = ds > 0;
         bool is_near_d = dd <= Vehicle::WIDTH*1.1;

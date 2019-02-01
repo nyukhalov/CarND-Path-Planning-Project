@@ -1,6 +1,7 @@
 #include "prediction.h"
 #include <math.h>
 #include <iostream>
+#include <assert.h>
 #include "utils.h"
 
 Prediction::Prediction(const Road &road, double pred_horizon_sec, double pred_resolution_sec)
